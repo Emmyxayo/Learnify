@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PhoneSchema } from "../value-objects/phone";
+import { subdomainUrl } from "../value-objects/subdomain";
 import { PlanTierSchema } from "./plan";
 import { CategorySchema } from "./course";
 
@@ -141,6 +142,13 @@ export type PaymentsConnection = z.infer<typeof PaymentsConnectionSchema>;
    delivery screens read later.
    ============================================================ */
 
+export const WhatsAppQualitySchema = z.enum(["green", "yellow", "red"]);
+export type WhatsAppQuality = z.infer<typeof WhatsAppQualitySchema>;
+
+/** Meta's tier for how many new people the number may message per day. */
+export const WhatsAppMessagingLimitSchema = z.enum(["250", "1k", "10k", "100k", "unlimited"]);
+export type WhatsAppMessagingLimit = z.infer<typeof WhatsAppMessagingLimitSchema>;
+
 export const WhatsAppConnectionSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("disconnected") }),
   z.object({
@@ -153,8 +161,8 @@ export const WhatsAppConnectionSchema = z.discriminatedUnion("status", [
     status: z.literal("connected"),
     phone: PhoneSchema,
     displayName: z.string(),
-    qualityRating: z.enum(["green", "yellow", "red"]),
-    messagingLimit: z.enum(["250", "1k", "10k", "100k", "unlimited"]),
+    qualityRating: WhatsAppQualitySchema,
+    messagingLimit: WhatsAppMessagingLimitSchema,
     connectedAt: z.string(),
   }),
   z.object({
@@ -410,6 +418,10 @@ export function capabilities(c: Creator): Record<CapabilityName, Capability> {
     withdraw: identity ? blocked(identity) : payments ? blocked(payments) : ALLOWED,
   };
 }
+
+/** The academy's public address, or null before step 1. */
+export const subdomainLink = (c: Creator): string | null =>
+  c.subdomain.value ? subdomainUrl(c.subdomain.value) : null;
 
 export const capability = (c: Creator, name: CapabilityName): Capability =>
   capabilities(c)[name];
