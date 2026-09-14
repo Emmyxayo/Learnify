@@ -18,23 +18,35 @@ const SIZES: Record<Size, string> = {
   lg: "h-13 px-7 text-base",
 };
 
+/**
+ * The button's looks, without the button.
+ *
+ * A call to action that navigates has to be an anchor — Next's Link
+ * prefetches, middle-click opens a tab, and a screen reader announces
+ * a destination rather than an action. Rather than pull in a Slot
+ * dependency to merge the two, the styling is a function anything can
+ * call, and Button is its first caller.
+ */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  className,
+}: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-control font-semibold",
+    "transition-colors duration-150",
+    "disabled:opacity-50 disabled:pointer-events-none",
+    VARIANTS[variant],
+    SIZES[size],
+    className
+  );
+}
+
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
 }
 
 export function Button({ variant = "primary", size = "md", className, ...props }: Props) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-control font-semibold",
-        "transition-colors duration-150",
-        "disabled:opacity-50 disabled:pointer-events-none",
-        VARIANTS[variant],
-        SIZES[size],
-        className
-      )}
-      {...props}
-    />
-  );
+  return <button className={buttonClasses({ variant, size, className })} {...props} />;
 }

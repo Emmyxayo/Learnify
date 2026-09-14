@@ -419,6 +419,40 @@ export function capabilities(c: Creator): Record<CapabilityName, Capability> {
   };
 }
 
+/* ============================================================
+   Where a creator belongs
+
+   One rule, read by the route guard. Without it the answer lives in
+   whichever layout was written most recently, and the two directions
+   disagree the first time someone changes one of them.
+
+   The bar is deliberately low. Only two things make the studio
+   unusable: an unverified phone, which blocks every capability, and
+   a missing profile, without which the academy has no name to put in
+   the topbar and a course has nothing to belong to.
+
+   Identity, payments, WhatsApp and the subdomain are NOT gates here,
+   and that is the same decision capabilities() already makes —
+   build-courses and publish stay allowed throughout. Forcing a
+   creator through a BVN check before they can see a dashboard would
+   contradict the one rule this product is built around: the thing
+   that hooks a creator has nothing third-party in front of it.
+   ============================================================ */
+
+export type CreatorDestination =
+  /** Not usable at all. Back to the front door. */
+  | { area: "auth" }
+  /** Must finish this step before the studio means anything. */
+  | { area: "setup"; step: OnboardingStep }
+  /** Free to use the product, blockers or not. */
+  | { area: "studio" };
+
+export function creatorDestination(c: Creator): CreatorDestination {
+  if (c.phoneVerifiedAt === null) return { area: "auth" };
+  if (c.profile === null) return { area: "setup", step: "profile" };
+  return { area: "studio" };
+}
+
 /** The academy's public address, or null before step 1. */
 export const subdomainLink = (c: Creator): string | null =>
   c.subdomain.value ? subdomainUrl(c.subdomain.value) : null;

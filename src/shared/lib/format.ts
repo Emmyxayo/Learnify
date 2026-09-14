@@ -5,11 +5,17 @@
 
 export function formatNaira(kobo: number, opts?: { compact?: boolean }): string {
   const naira = kobo / 100;
+  const compact = opts?.compact ?? false;
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",
-    maximumFractionDigits: 0,
-    notation: opts?.compact ? "compact" : "standard",
+    /* Standard notation shows whole naira — kobo on a revenue figure is
+       noise. Compact keeps one decimal, because dropping it rounds
+       1,691,000 to "₦2M" and a creator reading their own earnings will
+       not forgive a number that is 18% wrong. Below a million the digit
+       costs nothing: 45,000 is still "₦45K". */
+    maximumFractionDigits: compact ? 1 : 0,
+    notation: compact ? "compact" : "standard",
   }).format(naira);
 }
 
@@ -39,4 +45,35 @@ export function formatPhone(e164: string): string {
 
 export function formatCount(n: number): string {
   return new Intl.NumberFormat("en-NG", { notation: "compact" }).format(n);
+}
+
+const RELATIVE = new Intl.RelativeTimeFormat("en-NG", { numeric: "auto" });
+
+/** Largest unit first, so 90 minutes reads "2 hours ago", not "90 minutes ago". */
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 31_536_000_000],
+  ["month", 2_592_000_000],
+  ["week", 604_800_000],
+  ["day", 86_400_000],
+  ["hour", 3_600_000],
+  ["minute", 60_000],
+];
+
+/**
+ * "18 minutes ago", "yesterday". Only for lists a creator reads as
+ * a feed — anything they might quote back to a student gets
+ * formatDate, because "last week" is not a date.
+ *
+ * Reads the clock, so it must not run during prerender. Every caller
+ * so far renders from a query result, which by definition arrives on
+ * the client.
+ */
+export function formatRelativeTime(iso: string, now: number = Date.now()): string {
+  const diff = new Date(iso).getTime() - now;
+  const abs = Math.abs(diff);
+
+  for (const [unit, ms] of UNITS) {
+    if (abs >= ms) return RELATIVE.format(Math.round(diff / ms), unit);
+  }
+  return "just now";
 }

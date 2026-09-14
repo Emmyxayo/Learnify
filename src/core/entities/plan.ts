@@ -3,6 +3,13 @@ import { z } from "zod";
 export const PlanTierSchema = z.enum(["starter", "growth", "pro", "enterprise"]);
 export type PlanTier = z.infer<typeof PlanTierSchema>;
 
+export const PLAN_TIER_LABELS: Record<PlanTier, string> = {
+  starter: "Starter",
+  growth: "Growth",
+  pro: "Pro",
+  enterprise: "Enterprise",
+};
+
 /** Ordered weakest to strongest — drives the PlanGate comparison. */
 export const TIER_RANK: Record<PlanTier, number> = {
   starter: 0,

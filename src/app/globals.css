@@ -224,6 +224,21 @@
     margin-inline: auto;
     padding-inline: var(--gutter);
   }
+
+  /* Bottom sheets rise from the edge they are anchored to. Without
+     this a sheet simply appears, and the eye reads it as the page
+     having been replaced rather than covered.
+
+     The reduced-motion rule in the base layer already flattens this
+     to nothing, so there is no second media query here. */
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .animate-sheet {
+    animation: sheet-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }
 
 /* ============================================================
