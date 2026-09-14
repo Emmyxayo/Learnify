@@ -444,6 +444,21 @@ export const CourseSchema = z.object({
   coverImageUrl: z.string().nullable(),
   modules: z.array(ModuleSchema),
   aiGenerated: z.boolean(),
+
+  /**
+   * When the creator settled the price, and when they settled the
+   * schedule.
+   *
+   * Both exist because a default is not a decision. A new course is
+   * created at zero naira on a daily 08:00 schedule, and without
+   * these there is no way to tell a creator who chose free from one
+   * who never opened the pricing section — which is exactly the
+   * difference the publish checklist has to report. Same shape and
+   * same reason as subdomain.confirmedAt.
+   */
+  pricedAt: z.string().nullable(),
+  scheduledAt: z.string().nullable(),
+
   /**
    * INVARIANT: status === "generating" if and only if
    * generation.status === "running". Both are set together, in the

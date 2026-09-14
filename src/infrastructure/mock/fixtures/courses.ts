@@ -132,6 +132,7 @@ function buildCourse(seed: Seed): Course {
   ];
 
   const generation = buildGeneration(seed);
+  const settled = seed.status === "published" || seed.status === "archived";
 
   return {
     id: seed.id,
@@ -149,6 +150,10 @@ function buildCourse(seed: Seed): Course {
     schedule: { mode: "daily", sendAt: "08:00" },
     coverImageUrl: null,
     modules,
+    /* Live and ready-to-review courses have been through the publish
+       screen; drafts and in-flight builds have not. */
+    pricedAt: settled ? faker.date.past({ years: 1 }).toISOString() : null,
+    scheduledAt: settled ? faker.date.past({ years: 1 }).toISOString() : null,
     generation,
     /* True only when the builder actually made it. */
     aiGenerated: generation !== null,

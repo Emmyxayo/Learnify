@@ -213,6 +213,8 @@ export const mockCourseRepository: CourseRepository = {
       coverImageUrl: null,
       modules: [],
       aiGenerated: input.sourceFileIds.length > 0,
+      pricedAt: null,
+      scheduledAt: null,
       generation: null,
       enrolmentCount: 0,
       rating: null,
