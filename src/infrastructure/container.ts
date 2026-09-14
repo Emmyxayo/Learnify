@@ -4,16 +4,22 @@ import type {
   CreatorRepository,
   DashboardRepository,
   DeliveryRepository,
+  StudentRepository,
+  SubmissionRepository,
 } from "@core/ports";
 import { mockCourseRepository } from "./mock/course-repository";
 import { mockDeliveryRepository } from "./mock/delivery-repository";
 import { mockCreatorRepository } from "./mock/creator-repository";
 import { mockAuthRepository } from "./mock/auth-repository";
 import { mockDashboardRepository } from "./mock/dashboard-repository";
+import { mockStudentRepository } from "./mock/student-repository";
+import { mockSubmissionRepository } from "./mock/submission-repository";
 import { httpCourseRepository } from "./http/course-repository";
 import { httpCreatorRepository } from "./http/creator-repository";
 import { httpAuthRepository } from "./http/auth-repository";
 import { httpDashboardRepository } from "./http/dashboard-repository";
+import { httpStudentRepository } from "./http/student-repository";
+import { httpSubmissionRepository } from "./http/submission-repository";
 
 /**
  * The one place that decides where data comes from.
@@ -28,5 +34,7 @@ export const repositories = {
   creators: (useMocks ? mockCreatorRepository : httpCreatorRepository) as CreatorRepository,
   auth: (useMocks ? mockAuthRepository : httpAuthRepository) as AuthRepository,
   dashboard: (useMocks ? mockDashboardRepository : httpDashboardRepository) as DashboardRepository,
+  students: (useMocks ? mockStudentRepository : httpStudentRepository) as StudentRepository,
+  submissions: (useMocks ? mockSubmissionRepository : httpSubmissionRepository) as SubmissionRepository,
   delivery: mockDeliveryRepository as DeliveryRepository, // http impl pending
 };

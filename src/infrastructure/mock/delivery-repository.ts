@@ -16,6 +16,15 @@ export const mockDeliveryRepository: DeliveryRepository = {
     return simulate(messages);
   },
 
+  async listForEnrolment(enrolmentId) {
+    /* Oldest first: this is read as a history, not a feed. */
+    return simulate(
+      messages
+        .filter((m) => m.enrolmentId === enrolmentId)
+        .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())
+    );
+  },
+
   async retry(messageId) {
     messages = messages.map((m) =>
       m.id === messageId ? { ...m, state: "queued" as const, failureReason: null } : m

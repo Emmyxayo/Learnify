@@ -2,7 +2,7 @@ import type { DashboardRepository } from "@core/ports";
 import type { DashboardSummary, RecentEnrolment } from "@core/entities/dashboard";
 import type { Course } from "@core/entities/course";
 import { COURSE_FIXTURES } from "./fixtures/courses";
-import { RECENT_ENROLMENT_SEEDS } from "./fixtures/enrolments";
+import { enrolmentsByRecency } from "./fixtures/students";
 import { simulate } from "./latency";
 
 /**
@@ -65,19 +65,21 @@ function buildSummary(creatorId: string): DashboardSummary {
   }, 0);
 
   const byId = new Map(mine.map((c) => [c.id, c]));
-  const now = Date.now();
 
-  const recentEnrolments: RecentEnrolment[] = RECENT_ENROLMENT_SEEDS.flatMap((seed) => {
-    const course = byId.get(seed.courseId);
+  /* The same enrolments the students screen lists. A dashboard that
+     invents its own rows is how "recent enrolments" ends up naming
+     people who are not in the students table. */
+  const recentEnrolments: RecentEnrolment[] = enrolmentsByRecency().flatMap((enrolment) => {
+    const course = byId.get(enrolment.courseId);
     if (!course) return [];
     return [
       {
-        id: seed.id,
-        studentId: seed.studentId,
-        studentName: seed.studentName,
+        id: enrolment.id,
+        studentId: enrolment.student.id,
+        studentName: enrolment.student.name,
         courseId: course.id,
         courseTitle: course.title,
-        enrolledAt: new Date(now - seed.minutesAgo * 60_000).toISOString(),
+        enrolledAt: enrolment.enrolledAt,
         amountPaid: course.price,
       },
     ];
