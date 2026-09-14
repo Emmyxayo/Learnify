@@ -9,20 +9,25 @@ import { useSession } from "@app-layer/auth/use-session";
 import { useDashboardSummary } from "@app-layer/dashboard/queries";
 import { formatCount, formatNaira } from "@shared/lib/format";
 import { hasNoCourses, hasUnpublishedWorkOnly, type DashboardSummary } from "@core/entities/dashboard";
-import { FirstCoursePrompt } from "./first-course-prompt";
+import { FirstCoursePrompt } from "../first-course-prompt";
 import { RecentEnrolments } from "./recent-enrolments";
 
 export function CreatorDashboard() {
   const { creator } = useSession();
-  const { data, isLoading, isError, refetch } = useDashboardSummary(creator?.id ?? null);
+  const { data, isPending, isError, refetch } = useDashboardSummary(creator?.id ?? null);
+
+  /* Covers the session resolving as well as the summary arriving, so
+     the page has one loading state rather than a spinner followed by
+     a skeleton followed by the real thing. */
+  const loading = !creator || isPending;
 
   return (
     <div className="space-y-5 sm:space-y-6">
       <h1 className="text-heading text-ink sm:text-title">Dashboard</h1>
 
-      {isLoading && <DashboardSkeleton />}
+      {loading && <DashboardSkeleton />}
 
-      {isError && (
+      {!loading && isError && (
         <StatusBanner
           tone="danger"
           title="Could not load your numbers"
@@ -36,7 +41,7 @@ export function CreatorDashboard() {
         </StatusBanner>
       )}
 
-      {data && creator && <DashboardBody summary={data} creatorId={creator.id} />}
+      {!loading && data && creator && <DashboardBody summary={data} creatorId={creator.id} />}
     </div>
   );
 }

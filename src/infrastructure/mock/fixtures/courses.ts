@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { Course, Module, Lesson, Category } from "@core/entities/course";
+import type { Course, CourseGeneration, Module, Lesson, Category } from "@core/entities/course";
+import { LESSON_AI_FIELDS, MODULE_AI_FIELDS } from "@core/entities/course";
 import { naira } from "@core/value-objects/money";
 
 // Fixed seed = identical data on every reload. Design review and
@@ -25,13 +26,23 @@ function makeLessons(moduleId: string, titles: string[]): Lesson[] {
         ? [{ id: faker.string.uuid(), kind: "pdf" as const, name: `${slugify(title)}.pdf`, url: "#", sizeBytes: 480_000 }]
         : [],
     hasQuiz: i % 2 === 0,
-    aiGenerated: true,
+    /* Straight out of the builder: nothing reviewed yet, which is
+       exactly the state the review screen has to be designed for. */
+    aiFields: [...LESSON_AI_FIELDS],
   }));
 }
 
 function makeModule(courseId: string, order: number, title: string, objectives: string[], lessonTitles: string[]): Module {
   const id = `${courseId}_m${order + 1}`;
-  return { id, courseId, title, objectives, order, lessons: makeLessons(id, lessonTitles) };
+  return {
+    id,
+    courseId,
+    title,
+    objectives: objectives.map((text, i) => ({ id: `${id}_o${i + 1}`, text, aiGenerated: true })),
+    order,
+    lessons: makeLessons(id, lessonTitles),
+    aiFields: [...MODULE_AI_FIELDS],
+  };
 }
 
 type Seed = {
@@ -46,6 +57,8 @@ type Seed = {
   ratingCount: number;
   enrolments: number;
   status: Course["status"];
+  /** Defaults to creator_001. Set it to reach another creator's list. */
+  creatorId?: string;
 };
 
 const SEEDS: Seed[] = [
@@ -58,7 +71,52 @@ const SEEDS: Seed[] = [
   { id: "c_cyb",  title: "Introduction to Cybersecurity", subtitle: "Protect your business before something breaks", category: "technology", level: "beginner", price: 18000, rating: 4.4, ratingCount: 21, enrolments: 95, status: "published" },
   { id: "c_prayer", title: "Prayer School", subtitle: "Twenty-one days of structured intercession", category: "ministry", level: "beginner", price: 3000, rating: 0, ratingCount: 0, enrolments: 0, status: "review" },
   { id: "c_agri", title: "Poultry Farming as a Business", subtitle: "Stock, feed, and sell your first thousand birds", category: "agriculture", level: "beginner", price: 9000, rating: 0, ratingCount: 0, enrolments: 0, status: "draft" },
+  /* The two states the fixtures were missing. Without a course in each,
+     the generating indicator and the archived treatment could only be
+     checked by editing this file — which is how they stay broken. */
+  { id: "c_tail", title: "Tailoring as a Business", subtitle: "From measurement to your first paying customer", category: "vocational", level: "beginner", price: 8000, rating: 0, ratingCount: 0, enrolments: 0, status: "generating" },
+  { id: "c_covid", title: "Community Health Basics", subtitle: "Retired — replaced by the 2026 syllabus", category: "healthcare", level: "beginner", price: 4000, rating: 4.2, ratingCount: 38, enrolments: 140, status: "archived" },
+  /* creator_002 is on Starter, which covers one course. This is that
+     one, so signing in as them is how the plan-limit state gets
+     looked at instead of taken on trust. */
+  { id: "c_tvo", title: "Tomato Value Chain", subtitle: "Grow, store and sell without losing half the harvest", category: "agriculture", level: "beginner", price: 6000, rating: 0, ratingCount: 0, enrolments: 0, status: "draft", creatorId: "creator_002" },
 ];
+
+/** Two plausible uploads, so the build screen has real names to show. */
+const SAMPLE_UPLOADS = (prefix: string) => [
+  { id: `src_${prefix}_1`, name: "workshop-notes.pdf", sizeBytes: 2_400_000, kind: "pdf" as const, uploadedAt: new Date().toISOString() },
+  { id: `src_${prefix}_2`, name: "session-recording.m4a", sizeBytes: 18_900_000, kind: "audio" as const, uploadedAt: new Date().toISOString() },
+];
+
+/**
+ * Kept in step with seed.status by construction. The invariant on
+ * CourseSchema says generating <-> running, and a fixture is exactly
+ * where that would quietly stop being true.
+ */
+function buildGeneration(seed: Seed): CourseGeneration | null {
+  if (seed.status === "generating") {
+    return {
+      status: "running",
+      /* Relative to module load, so a fixture that is meant to be
+         mid-generation still is when you open the page. */
+      lastAttemptAt: new Date().toISOString(),
+      attempts: 1,
+      sourceFiles: SAMPLE_UPLOADS(seed.id),
+      phase: "reading",
+      estimatedSeconds: 40,
+    };
+  }
+  if (seed.status === "review") {
+    return {
+      status: "succeeded",
+      lastAttemptAt: new Date().toISOString(),
+      attempts: 1,
+      sourceFiles: SAMPLE_UPLOADS(seed.id),
+      completedAt: new Date().toISOString(),
+    };
+  }
+  return null;
+}
 
 function buildCourse(seed: Seed): Course {
   const modules = [
@@ -73,9 +131,11 @@ function buildCourse(seed: Seed): Course {
       ["Scaling up", "Where people get stuck", "Your final assignment"]),
   ];
 
+  const generation = buildGeneration(seed);
+
   return {
     id: seed.id,
-    creatorId: CREATOR_ID,
+    creatorId: seed.creatorId ?? CREATOR_ID,
     creatorName: CREATOR_NAME,
     slug: slugify(seed.title),
     title: seed.title,
@@ -89,7 +149,9 @@ function buildCourse(seed: Seed): Course {
     schedule: { mode: "daily", sendAt: "08:00" },
     coverImageUrl: null,
     modules,
-    aiGenerated: true,
+    generation,
+    /* True only when the builder actually made it. */
+    aiGenerated: generation !== null,
     enrolmentCount: seed.enrolments,
     rating: seed.rating || null,
     ratingCount: seed.ratingCount,

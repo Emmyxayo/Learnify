@@ -1,6 +1,7 @@
 import type { CourseRepository } from "@core/ports";
 import { CourseSchema, type Course } from "@core/entities/course";
 import { request } from "./http-client";
+import { SourceFileSchema, type SourceFile } from "@core/value-objects/source-file";
 import { z } from "zod";
 
 /**
@@ -50,6 +51,50 @@ export const httpCourseRepository: CourseRepository = {
 
   async publish(id) {
     return parseOne(await request(`/courses/${id}/publish`, { method: "POST" }));
+  },
+
+  /**
+   * XHR rather than fetch, purely for upload progress: fetch still
+   * cannot report bytes sent, and a per-file bar is the one honest
+   * progress indicator in this flow.
+   */
+  async uploadSourceFile(file, onProgress) {
+    const body = new FormData();
+    body.append("file", file);
+
+    const data = await new Promise<unknown>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads`);
+
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch {
+            reject(new Error(`${file.name} uploaded but the server sent back something unreadable.`));
+          }
+        } else {
+          reject(new Error(`${file.name} failed to upload. Try that file again.`));
+        }
+      });
+
+      xhr.addEventListener("error", () =>
+        reject(new Error(`${file.name} stopped uploading. Check your connection and try again.`))
+      );
+      xhr.addEventListener("abort", () => reject(new Error(`${file.name} was cancelled.`)));
+
+      xhr.send(body);
+    });
+
+    return SourceFileSchema.parse(data) satisfies SourceFile;
+  },
+
+  async retryGeneration(courseId) {
+    return parseOne(await request(`/courses/${courseId}/generate/retry`, { method: "POST" }));
   },
 
   async generateFromUpload(courseId, fileIds) {

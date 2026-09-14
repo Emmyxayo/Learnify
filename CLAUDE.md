@@ -10,7 +10,9 @@ Next.js 15 App Router, TypeScript strict, Tailwind v4, TanStack Query v5, Zod.
 ## Architecture — clean layering, enforce it
 
 src/core/           entities (Zod schemas), value objects, repository interfaces
-                    IMPORTS NOTHING. No React, no Next, no fetch. Ever.
+                    core/ has no framework or transport dependencies — no React,
+                    no Next, no fetch, no repository impls. Standard platform
+                    types (File, Blob, URL, Date, Intl) are fine.
 src/application/    use cases + TanStack Query hooks. "use client".
 src/infrastructure/ mock/ and http/ repository impls + container.ts
 src/presentation/   ui/ primitives, patterns/ composites

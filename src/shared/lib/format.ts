@@ -77,3 +77,16 @@ export function formatRelativeTime(iso: string, now: number = Date.now()): strin
   }
   return "just now";
 }
+
+/** "2.4 MB". Decimal units, because that is what file managers show. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = bytes / 1000;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+}

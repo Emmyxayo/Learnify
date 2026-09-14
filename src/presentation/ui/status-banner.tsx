@@ -21,6 +21,7 @@ const ICONS = { info: Info, pending: Clock, success: CheckCircle2, warning: Tria
  * looks the same everywhere and a creator learns to read it once.
  */
 export function StatusBanner({
+  id,
   tone,
   title,
   children,
@@ -28,6 +29,8 @@ export function StatusBanner({
   busy,
   className,
 }: {
+  /** For aria-describedby, when a disabled control points at the reason. */
+  id?: string;
   tone: BannerTone;
   title: string;
   children?: ReactNode;
@@ -41,6 +44,7 @@ export function StatusBanner({
 
   return (
     <div
+      id={id}
       className={cn("flex gap-3 rounded-card border p-3.5 sm:p-4", wrapper, className)}
       role={tone === "danger" ? "alert" : "status"}
     >

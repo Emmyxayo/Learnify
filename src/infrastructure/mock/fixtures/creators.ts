@@ -37,7 +37,10 @@ export const CREATOR_FIXTURES: Creator[] = [
     emailVerifiedAt: daysAgo(120),
     googleEmail: "grace.adeyemi@gmail.com",
     avatarUrl: null,
-    plan: "growth",
+    /* Pro, not Growth: this creator has ten live courses and 2,695
+       enrolments, and Growth covers five courses and 500 students.
+       The plan has to match the data or every limit reads as a bug. */
+    plan: "pro",
     profile: {
       academyName: "Grace Leadership Academy",
       category: "leadership",

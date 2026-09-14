@@ -1,4 +1,4 @@
-export type { CourseRepository, CourseFilters } from "./course-repository";
+export type { CourseRepository, CourseFilters, UploadProgress } from "./course-repository";
 export type { DeliveryRepository } from "./delivery-repository";
 export type { DashboardRepository } from "./dashboard-repository";
 export type { StudentRepository } from "./student-repository";

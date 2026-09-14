@@ -2,8 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@shared/lib/cn";
-import { Spinner } from "@ui/ui/spinner";
 import { useSession } from "@app-layer/auth/use-session";
 import { useCreator } from "@app-layer/creator/queries";
 import {
@@ -45,20 +43,11 @@ export function OnboardingGuard({ area, children }: { area: Area; children: Reac
     if (target) router.replace(target);
   }, [target, router]);
 
-  if (sessionLoading) {
-    return (
-      <div
-        className={cn(
-          "flex items-center gap-2 py-16 text-muted",
-          /* Setup has no container of its own around this slot; the
-             studio shell's main already provides one. */
-          area === "setup" && "container-page"
-        )}
-      >
-        <Spinner /> Loading
-      </div>
-    );
-  }
+  /* No loading state of its own. Every screen underneath already has
+     a skeleton shaped like the thing it is about to show, and putting
+     a generic spinner in front of it meant two loading states in a
+     row and a layout jump between them. While the session resolves the
+     children render their own skeletons; they have no data to leak. */
 
   // Mid-redirect. Render nothing rather than flashing a screen the
   // creator is about to be moved off.
