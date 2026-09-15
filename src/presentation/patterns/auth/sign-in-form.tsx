@@ -36,7 +36,7 @@ export function SignInForm() {
 
     requestOtp.mutate(
       { phone: phoneE164, purpose: "sign-in" },
-      { onSuccess: (challenge) => router.push(`/verify?challenge=${challenge.id}`) }
+      { onSuccess: (challenge) => router.push(`/confirm?challenge=${challenge.id}`) }
     );
   }
 

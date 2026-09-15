@@ -1,3 +1,4 @@
+import { Providers } from "../providers";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { OnboardingGuard } from "@ui/patterns/onboarding/onboarding-guard";
@@ -10,15 +11,17 @@ import { OnboardingGuard } from "@ui/patterns/onboarding/onboarding-guard";
  */
 export default function SetupLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-surface">
-      <header className="border-b border-border bg-surface-raised">
-        <div className="container-page flex h-14 items-center">
-          <Link href="/" className="font-bold tracking-tight text-brand">
-            Learnify
-          </Link>
-        </div>
-      </header>
-      <OnboardingGuard area="setup">{children}</OnboardingGuard>
-    </div>
+    <Providers>
+      <div className="min-h-dvh bg-surface">
+        <header className="border-b border-border bg-surface-raised">
+          <div className="container-page flex h-14 items-center">
+            <Link href="/" className="font-bold tracking-tight text-brand">
+              Learnify
+            </Link>
+          </div>
+        </header>
+        <OnboardingGuard area="setup">{children}</OnboardingGuard>
+      </div>
+    </Providers>
   );
 }

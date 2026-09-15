@@ -53,7 +53,7 @@ export function SignUpForm({ prefillEmail }: { prefillEmail?: string }) {
         fullName: fullName.trim(),
         email: email.trim() || null,
       },
-      { onSuccess: (challenge) => router.push(`/verify?challenge=${challenge.id}`) }
+      { onSuccess: (challenge) => router.push(`/confirm?challenge=${challenge.id}`) }
     );
   }
 

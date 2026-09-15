@@ -20,7 +20,8 @@ src/shared/         lib utilities
 src/app/            routes only. ~15 lines. Compose a feature component, read params.
 
 Rules:
-- Components call hooks from src/application/, never repositories directly.
+- Components reach data through src/application/ — hooks in client components,
+  plain async functions in server components. Never import a repository directly.
 - container.ts is the ONLY file that knows mock vs http.
 - New entity? Zod schema in core/entities, port in core/ports, both impls, then hooks.
 

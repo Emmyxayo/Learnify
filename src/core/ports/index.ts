@@ -1,6 +1,13 @@
 export type { CourseRepository, CourseFilters, UploadProgress } from "./course-repository";
 export type { DeliveryRepository } from "./delivery-repository";
 export type { DashboardRepository } from "./dashboard-repository";
+export type {
+  CertificateRepository,
+  CertificateFilters,
+  ReissueInput,
+  ReissueResult,
+  UploadedBackground,
+} from "./certificate-repository";
 export type { StudentRepository, StudentFilters } from "./student-repository";
 export type {
   SubmissionRepository,

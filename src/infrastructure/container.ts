@@ -1,5 +1,6 @@
 import type {
   AuthRepository,
+  CertificateRepository,
   CourseRepository,
   CreatorRepository,
   DashboardRepository,
@@ -13,12 +14,14 @@ import { mockCreatorRepository } from "./mock/creator-repository";
 import { mockAuthRepository } from "./mock/auth-repository";
 import { mockDashboardRepository } from "./mock/dashboard-repository";
 import { mockStudentRepository } from "./mock/student-repository";
+import { mockCertificateRepository } from "./mock/certificate-repository";
 import { mockSubmissionRepository } from "./mock/submission-repository";
 import { httpCourseRepository } from "./http/course-repository";
 import { httpCreatorRepository } from "./http/creator-repository";
 import { httpAuthRepository } from "./http/auth-repository";
 import { httpDashboardRepository } from "./http/dashboard-repository";
 import { httpStudentRepository } from "./http/student-repository";
+import { httpCertificateRepository } from "./http/certificate-repository";
 import { httpSubmissionRepository } from "./http/submission-repository";
 
 /**
@@ -35,6 +38,7 @@ export const repositories = {
   auth: (useMocks ? mockAuthRepository : httpAuthRepository) as AuthRepository,
   dashboard: (useMocks ? mockDashboardRepository : httpDashboardRepository) as DashboardRepository,
   students: (useMocks ? mockStudentRepository : httpStudentRepository) as StudentRepository,
+  certificates: (useMocks ? mockCertificateRepository : httpCertificateRepository) as CertificateRepository,
   submissions: (useMocks ? mockSubmissionRepository : httpSubmissionRepository) as SubmissionRepository,
   delivery: mockDeliveryRepository as DeliveryRepository, // http impl pending
 };
