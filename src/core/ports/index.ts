@@ -21,3 +21,4 @@ export type {
   StartPaymentsConnectionResult,
   ConnectWhatsAppInput,
 } from "./creator-repository";
+export type { StorefrontRepository, StartEnrolmentInput } from "./storefront-repository";

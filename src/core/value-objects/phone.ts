@@ -101,3 +101,17 @@ export function formatNgDisplay(e164: string): string {
 export const PhoneSchema = z
   .string()
   .refine(isValidNgMobile, { message: "Enter a valid Nigerian mobile number" });
+
+/**
+ * A wa.me link that opens a chat with this number.
+ *
+ * wa.me wants digits with no plus and no punctuation. The optional
+ * message is what the student's compose box is pre-filled with — it
+ * gives someone who has never messaged this academy before something
+ * to send other than "hi".
+ */
+export function whatsappLink(e164: string, message?: string): string {
+  const digits = e164.replace(/\D/g, "");
+  const base = `https://wa.me/${digits}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}

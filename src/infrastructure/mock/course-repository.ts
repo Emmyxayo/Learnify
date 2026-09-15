@@ -6,6 +6,7 @@ import { detectSourceKind } from "@core/value-objects/source-file";
 import { COURSE_FIXTURES } from "./fixtures/courses";
 import { MockApiError, simulate } from "./latency";
 import { naira } from "@core/value-objects/money";
+import { CREATOR_FIXTURES } from "./fixtures/creators";
 
 // Mutable copy so create/update/publish actually change what you see.
 let courses: Course[] = structuredClone(COURSE_FIXTURES);
@@ -190,8 +191,30 @@ export const mockCourseRepository: CourseRepository = {
     return simulate(found ? tick(found) : null);
   },
 
-  async getBySlug(_creatorSlug, courseSlug) {
-    const found = courses.find((c) => c.slug === courseSlug);
+  /**
+   * Scoped to the creator, not just the course slug.
+   *
+   * Course slugs are derived from titles and are only unique within
+   * an academy — two creators both teaching "Excel for Business" is
+   * the normal case, not a corner one. Matching on the course slug
+   * alone serves whichever course happened to be seeded first, under
+   * the wrong academy's name, branding and price.
+   *
+   * The creator slug is an address, so a retired one resolves here
+   * too: a forwarded link must find the course, and the page above
+   * redirects it to the canonical URL.
+   */
+  async getBySlug(creatorSlug, courseSlug) {
+    const slug = creatorSlug.trim().toLowerCase();
+    const creator = CREATOR_FIXTURES.find(
+      (c) =>
+        c.subdomain.value === slug || c.subdomain.previous.some((p) => p.value === slug)
+    );
+    if (!creator) return simulate(null);
+
+    const found = courses.find(
+      (c) => c.slug === courseSlug && c.creatorId === creator.id
+    );
     return simulate(found ? tick(found) : null);
   },
 

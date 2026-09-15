@@ -46,6 +46,10 @@ export const CREATOR_FIXTURES: Creator[] = [
       category: "leadership",
       bio: "I train church leaders and small business owners across Lagos and Ogun.",
     },
+    /* Deep burgundy. Chosen to be nowhere near Learnify teal, so a
+       sales page that still looks teal is visibly broken rather than
+       plausibly fine. */
+    branding: { brandColor: "#7A1F3D" },
     identity: {
       status: "verified",
       document: "bvn",
@@ -108,6 +112,9 @@ export const CREATOR_FIXTURES: Creator[] = [
       category: "technology",
       bio: "Practical software and AI training for Nigerian graduates.",
     },
+    /* A second tenant, a different hue. Two storefronts rendering the
+       same markup in two palettes is the whole claim of multi-tenancy. */
+    branding: { brandColor: "#2450C8" },
     /* Submitted as the app starts, so it is genuinely still running.
        It resolves to verified after NEXT_PUBLIC_MOCK_IDENTITY_MS —
        raise that to hold it pending across a reload. */
@@ -151,6 +158,10 @@ export const CREATOR_FIXTURES: Creator[] = [
       category: "agriculture",
       bio: "Dry season farming, irrigation and market access for smallholders.",
     },
+    /* Deliberately light. White on this is 1.6:1 — unreadable. It is here
+       to prove --on-brand flips to ink by luminance rather than being a
+       constant with a nice name. */
+    branding: { brandColor: "#F2C511" },
     identity: {
       status: "rejected",
       document: "bvn",
@@ -203,6 +214,9 @@ export const CREATOR_FIXTURES: Creator[] = [
     payments: { status: "disconnected" },
     whatsapp: { status: "disconnected" },
     /* No profile yet, so no address yet. Assigned the moment step 1 lands. */
+    /* Never picked one. Renders no override at all, so the page is
+       Learnify teal — which is a different thing from picking teal. */
+    branding: { brandColor: null },
     subdomain: { value: null, assignedAt: null, confirmedAt: null, previous: [] },
     onboarding: {
       resumeStep: "profile",

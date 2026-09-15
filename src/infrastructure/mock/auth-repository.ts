@@ -74,6 +74,8 @@ function createCreator(phone: string, fullName: string, email: string | null): C
     avatarUrl: null,
     plan: "starter",
     profile: null,
+    /* No academy yet, so nothing to brand. Picked during setup. */
+    branding: { brandColor: null },
     identity: { status: "unsubmitted" },
     payments: { status: "disconnected" },
     whatsapp: { status: "disconnected" },

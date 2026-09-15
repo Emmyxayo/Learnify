@@ -22,6 +22,12 @@
   --brand-hover:      #0B6357;
   --brand-subtle:     #E4F1EE;   /* tinted fills, icon chips, pills */
   --brand-border:     #BFDCD6;
+  /* Text and icons sitting ON a brand fill. White clears 4.9:1 on the
+     teal above. It is a token rather than a literal text-white because
+     a creator's brand colour replaces --brand on their sales page, and
+     a light one (a gold, a bright green) would put white on white.
+     resolveBrand() picks ink or white by luminance and sets this. */
+  --on-brand:         #FFFFFF;
 
   /* The delivery layer. This dark teal is the signature surface —
      it means "WhatsApp is happening here". Reserved for the live
@@ -98,6 +104,7 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-subtle: var(--brand-subtle);
   --color-brand-border: var(--brand-border);
+  --color-on-brand: var(--on-brand);
 
   --color-deep: var(--deep);
   --color-deep-raised: var(--deep-raised);
@@ -138,6 +145,10 @@
   --radius-control: var(--radius-control);
   --radius-card: var(--radius-card);
   --radius-panel: var(--radius-panel);
+  /* Declared in :root since the start but never mapped here, so
+     rounded-pill generated no CSS and every chip using it rendered
+     square. Mapping it is the whole fix. */
+  --radius-pill: var(--radius-pill);
 
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
@@ -251,5 +262,18 @@
    Every utility downstream re-resolves automatically.
    ============================================================ */
 [data-tenant] {
-  /* overridden at runtime; listed here for discoverability */
+  /* Every property below is set inline from the creator's stored hex by
+     resolveBrand() in core/value-objects/brand.ts, which derives the
+     whole ramp from that one colour. They are listed here so the set is
+     discoverable, and commented out because a value here would win over
+     :root for creators who have not picked a colour.
+
+       --brand           the creator's hex, verbatim
+       --brand-hover     mixed 20% toward black
+       --brand-subtle    mixed 88.8% toward white
+       --brand-border    mixed 73% toward white
+       --on-brand        var(--ink) or var(--surface-raised), by luminance
+
+     A creator with no brand colour renders no style attribute at all,
+     so :root stands and the page is Learnify teal. */
 }

@@ -206,6 +206,27 @@ export const CreatorSubdomainSchema = z.object({
 export type CreatorSubdomain = z.infer<typeof CreatorSubdomainSchema>;
 
 /* ============================================================
+   Branding
+
+   The creator's own colour, used on their public sales page.
+
+   Stored as a hex on the entity, not expressed as a design token,
+   because the creator chose it: it is content they authored, it
+   varies per row, and it has to survive verbatim onto a page that
+   is theirs rather than ours. The no-hardcoded-colour rule governs
+   Learnify's chrome, which is the opposite direction of travel.
+
+   Null means they never picked one, which is different from picking
+   Learnify teal: null renders no override at all, so :root stands.
+   See core/value-objects/brand.ts for what one hex expands into.
+   ============================================================ */
+
+export const CreatorBrandingSchema = z.object({
+  brandColor: z.string().nullable(),
+});
+export type CreatorBranding = z.infer<typeof CreatorBrandingSchema>;
+
+/* ============================================================
    The creator
    ============================================================ */
 
@@ -226,6 +247,7 @@ export const CreatorSchema = z.object({
   plan: PlanTierSchema,
 
   profile: CreatorProfileSchema.nullable(),
+  branding: CreatorBrandingSchema,
   identity: IdentityVerificationSchema,
   payments: PaymentsConnectionSchema,
   whatsapp: WhatsAppConnectionSchema,

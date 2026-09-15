@@ -80,6 +80,20 @@ const SEEDS: Seed[] = [
      one, so signing in as them is how the plan-limit state gets
      looked at instead of taken on trust. */
   { id: "c_tvo", title: "Tomato Value Chain", subtitle: "Grow, store and sell without losing half the harvest", category: "agriculture", level: "beginner", price: 6000, rating: 0, ratingCount: 0, enrolments: 0, status: "draft", creatorId: "creator_002" },
+  /* Deliberately the same title, and therefore the same slug, as
+     Grace's c_xls. Course slugs come from titles and are only unique
+     inside an academy — two people teaching Excel is the ordinary
+     case, not a contrived one. Without this pair, a sales page that
+     matched on the course slug alone would serve whichever course
+     was seeded first, under the wrong academy's name, branding and
+     price, and every test would still pass. */
+  /* creator_003 brands itself gold. Its sales page is where the
+     --on-brand flip is visible rather than merely computed: white on
+     that colour is 1.6:1, so the buttons have to come out with ink on
+     them. Its WhatsApp is also disconnected, which is how the success
+     screen with no wa.me link gets looked at. */
+  { id: "c_irr", title: "Dry Season Irrigation", subtitle: "Water your farm through the dry months without a borehole", category: "agriculture", level: "beginner", price: 4500, rating: 4.7, ratingCount: 64, enrolments: 210, status: "published", creatorId: "creator_003" },
+  { id: "c_xls2", title: "Excel for Business", subtitle: "Spreadsheets for people who bill by the hour", category: "technology", level: "intermediate", price: 14000, compareAt: 20000, rating: 4.3, ratingCount: 31, enrolments: 88, status: "published", creatorId: "creator_002" },
 ];
 
 /** Two plausible uploads, so the build screen has real names to show. */
