@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getSalesPage } from "@app-layer/storefront/sales-page";
 import { Checkout } from "@ui/patterns/storefront/checkout";
-import { enrolUrl } from "@shared/lib/site";
+import { enrolPath } from "@shared/lib/site";
 
 type Params = Promise<{ creatorSlug: string; courseSlug: string }>;
 type Search = Promise<{ ref?: string }>;
@@ -24,7 +24,7 @@ export default async function Page({
   const { ref } = await searchParams;
   const result = await getSalesPage(creatorSlug, courseSlug);
 
-  if (result.outcome === "moved") permanentRedirect(enrolUrl(result.creatorSlug, courseSlug));
+  if (result.outcome === "moved") permanentRedirect(enrolPath(result.creatorSlug, courseSlug));
   if (result.outcome === "not-found") notFound();
 
   return (

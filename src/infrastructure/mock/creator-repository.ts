@@ -1,5 +1,10 @@
 import type { CreatorRepository } from "@core/ports";
 import type { Creator, OnboardingStep, PayoutProvider } from "@core/entities/creator";
+import type { PhoneChangeResult } from "@core/entities/session";
+import { toE164 } from "@core/value-objects/phone";
+import { archiveCourses } from "./course-repository";
+import { invoicesFor } from "./fixtures/invoices";
+import { clearChallenge, readChallenge, writeChallenge } from "./challenge-store";
 import {
   normalizeSubdomain,
   subdomainFromAcademyName,
@@ -225,6 +230,168 @@ export const mockCreatorRepository: CreatorRepository = {
     return creatorStore.update(id, {
       subdomain: { value: normalized, assignedAt: now, confirmedAt: now, previous: retired },
     });
+  },
+
+  /* ============================================================
+     Branding
+     ============================================================ */
+
+  async updateBranding(id, branding) {
+    mustGet(id);
+    await gate();
+    return creatorStore.update(id, { branding });
+  },
+
+  async uploadLogo(file) {
+    /* Longer than the default: this is an image going up a Nigerian
+       mobile connection, and a logo picker that resolves instantly
+       never gets a pending state built for it. */
+    await gate(1400);
+    return { url: URL.createObjectURL(file), fileName: file.name };
+  },
+
+  /* ============================================================
+     Account
+     ============================================================ */
+
+  async updateAccount(id, input) {
+    const current = mustGet(id);
+    await gate();
+    return creatorStore.update(id, {
+      fullName: input.fullName,
+      email: input.email,
+      /* Changing the address invalidates the confirmation that went
+         with the old one. A verified flag that outlives the value it
+         verified is worse than no flag. */
+      emailVerifiedAt: input.email === current.email ? current.emailVerifiedAt : null,
+    });
+  },
+
+  /* ============================================================
+     The login number
+
+     A re-verification, not an edit. The phone IS the account, so
+     nothing moves until the creator proves they hold the new number.
+     ============================================================ */
+
+  async requestPhoneChange(id, newPhone) {
+    const current = mustGet(id);
+    const phone = toE164(newPhone);
+    if (!phone) throw new Error("Enter a valid Nigerian mobile number");
+
+    if (phone === current.phone) {
+      throw new Error("That is already your number");
+    }
+
+    /* Checked before the code is sent, not after it is typed. A
+       creator should not enter six digits to be told the number was
+       never available. This is a precondition, not an OTP failure,
+       which is why it throws rather than coming back as ok:false. */
+    const taken = creatorStore.findByPhone(phone);
+    if (taken && taken.id !== id) {
+      throw new Error("Another account already uses that number");
+    }
+
+    await gate();
+
+    const challenge = {
+      id: `chl_${Math.random().toString(36).slice(2, 12)}`,
+      phone,
+      purpose: "change-phone" as const,
+      fullName: null,
+      email: null,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+      resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+      attemptsRemaining: 5,
+    };
+    writeChallenge(challenge);
+    console.info(`[mock] OTP for ${phone} is 123456`);
+
+    return {
+      id: challenge.id,
+      phoneMasked: `+${phone.slice(1, 4)} ${phone.slice(4, 7)} ••• ${phone.slice(-4)}`,
+      purpose: challenge.purpose,
+      createdAt: challenge.createdAt,
+      expiresAt: challenge.expiresAt,
+      resendAvailableAt: challenge.resendAvailableAt,
+      attemptsRemaining: challenge.attemptsRemaining,
+    };
+  },
+
+  async confirmPhoneChange(id, challengeId, code) {
+    mustGet(id);
+    const stored = readChallenge(challengeId);
+
+    if (!stored || stored.purpose !== "change-phone") {
+      return simulate<PhoneChangeResult>({
+        ok: false,
+        failure: "unknown-challenge",
+        attemptsRemaining: 0,
+      });
+    }
+
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) {
+      return simulate<PhoneChangeResult>({
+        ok: false,
+        failure: "expired",
+        attemptsRemaining: stored.attemptsRemaining,
+      });
+    }
+
+    if (stored.attemptsRemaining <= 0) {
+      return simulate<PhoneChangeResult>({
+        ok: false,
+        failure: "too-many-attempts",
+        attemptsRemaining: 0,
+      });
+    }
+
+    if (code !== "123456") {
+      const attemptsRemaining = stored.attemptsRemaining - 1;
+      writeChallenge({ ...stored, attemptsRemaining });
+      return simulate<PhoneChangeResult>({
+        ok: false,
+        failure: attemptsRemaining === 0 ? "too-many-attempts" : "invalid-code",
+        attemptsRemaining,
+      });
+    }
+
+    clearChallenge();
+
+    /* The login number only. whatsapp.phone is deliberately untouched
+       — a creator's business line is often not their login, and moving
+       both would take the number their students already message out
+       from under them without asking. The settings screen says so. */
+    const creator = creatorStore.update(id, {
+      phone: stored.phone,
+      phoneVerifiedAt: new Date().toISOString(),
+    });
+
+    return simulate<PhoneChangeResult>({ ok: true, creator });
+  },
+
+  /* ============================================================
+     Plan and billing
+     ============================================================ */
+
+  async changePlan(id, input) {
+    mustGet(id);
+    await gate(900);
+
+    /* One operation. The tier and the courses that have to go move
+       together, because a half-applied change leaves the account on a
+       plan that does not cover what it owns. */
+    if (input.archiveCourseIds.length > 0) {
+      archiveCourses(input.archiveCourseIds);
+    }
+
+    return creatorStore.update(id, { plan: input.tier });
+  },
+
+  async listInvoices(id) {
+    const creator = mustGet(id);
+    return simulate(invoicesFor(creator.plan, creator.id));
   },
 
   async setResumeStep(id, step: OnboardingStep) {

@@ -17,6 +17,10 @@ import type {
   WhatsAppQuality,
 } from "@core/entities/creator";
 import { formatNgDisplay } from "@core/value-objects/phone";
+import { activeDeliveryCount } from "@core/entities/student";
+import { useEnrolments } from "@app-layer/student/queries";
+import { DisconnectWhatsAppDialog } from "./disconnect-whatsapp-dialog";
+import { StepContinue, StepSkip } from "./step-chrome";
 
 const QUALITY_COPY: Record<WhatsAppQuality, string> = {
   green: "Good standing. No sending restrictions.",
@@ -37,7 +41,7 @@ const LIMIT_COPY: Record<WhatsAppMessagingLimit, string> = {
  * WhatsApp actually becomes real for the creator. The preview shows
  * what their students will see before a single message sends.
  */
-export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const { whatsapp } = creator;
   const connect = useConnectWhatsApp(creator.id);
   const disconnect = useDisconnectWhatsApp(creator.id);
@@ -50,6 +54,13 @@ export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone: ()
   );
   const [displayName, setDisplayName] = useState(creator.profile?.academyName ?? "");
   const [touched, setTouched] = useState(false);
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+
+  /* Only asked when there is something to disconnect. During onboarding
+     this never runs, which is the point — a wizard step should not open
+     with a student query for an account that has none. */
+  const enrolments = useEnrolments(whatsapp.status === "connected" ? creator.id : null);
+  const affected = activeDeliveryCount(enrolments.data ?? []);
 
   if (whatsapp.status === "connected") {
     return (
@@ -60,17 +71,31 @@ export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone: ()
         </StatusBanner>
 
         <div className="flex flex-wrap gap-3">
-          <Button size="lg" onClick={onDone}>Continue</Button>
+          <StepContinue onDone={onDone} />
           <Button
             variant="ghost"
             size="lg"
             disabled={disconnect.isPending}
-            onClick={() => disconnect.mutate(undefined)}
+            onClick={() => setConfirmingDisconnect(true)}
           >
             {disconnect.isPending && <Spinner label="" />}
             Use a different number
           </Button>
         </div>
+
+        {/* Lives in the step rather than in settings, so both surfaces
+            get it. Disconnecting is the same act wherever it is done. */}
+        <DisconnectWhatsAppDialog
+          open={confirmingDisconnect}
+          onClose={() => setConfirmingDisconnect(false)}
+          onConfirm={() =>
+            disconnect.mutate(undefined, { onSuccess: () => setConfirmingDisconnect(false) })
+          }
+          pending={disconnect.isPending}
+          phone={whatsapp.phone}
+          affected={affected}
+          countKnown={!enrolments.isLoading}
+        />
       </div>
     );
   }
@@ -83,7 +108,7 @@ export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone: ()
           {formatNgDisplay(whatsapp.phone)}. Reviews usually finish within a day, and nothing else is
           waiting on it.
         </StatusBanner>
-        <Button size="lg" onClick={onDone}>Continue</Button>
+        <StepContinue onDone={onDone} />
       </div>
     );
   }
@@ -178,12 +203,11 @@ export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone: ()
         </Button>
       </form>
 
-      <p className="text-sm text-muted">
-        <button type="button" onClick={onDone} className="font-semibold text-brand hover:underline">
-          Skip for now
-        </button>{" "}
-        — you can connect a number any time before your first lesson sends.
-      </p>
+      <StepSkip onDone={onDone}>
+        {(skip) => (
+          <>{skip} — you can connect a number any time before your first lesson sends.</>
+        )}
+      </StepSkip>
     </div>
   );
 }

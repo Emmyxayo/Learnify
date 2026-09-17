@@ -15,23 +15,27 @@ import type { Course } from "@core/entities/course";
  * generation, review, pricing — exists so that this link can be
  * pasted into a WhatsApp group, so the link is the screen rather than
  * a line of confirmation text under a tick.
+ *
+ * `url` arrives absolute and already correct for this deployment; see
+ * shared/lib/site.ts. It used to arrive as a bare host that this
+ * component prefixed with https:// itself, which is how the one
+ * action the builder asks a creator to take came to point at a domain
+ * nobody owns.
  */
 export function PublishedSuccess({ course, url }: { course: Course; url: string | null }) {
   const [copied, setCopied] = useState(false);
-
-  const href = url ? `https://${url}` : null;
 
   /* Prefilled, not prescriptive — WhatsApp opens the composer and the
      creator edits before sending. Title and link only; anything more
      is us writing in their voice to their own community. */
   const share = url
-    ? `https://wa.me/?text=${encodeURIComponent(`${course.title}\n\nhttps://${url}`)}`
+    ? `https://wa.me/?text=${encodeURIComponent(`${course.title}\n\n${url}`)}`
     : null;
 
   async function copy() {
     if (!url) return;
     try {
-      await navigator.clipboard.writeText(`https://${url}`);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -61,7 +65,9 @@ export function PublishedSuccess({ course, url }: { course: Course; url: string 
         </p>
 
         <p className="mt-2 break-all text-base font-semibold text-on-deep sm:text-lg">
-          {url ?? "Your address is still being set up."}
+          {/* Scheme stripped for reading; every copy and share path
+              above uses the full URL. */}
+          {url ? url.replace(/^https?:\/\//, "") : "Your address is still being set up."}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -89,9 +95,9 @@ export function PublishedSuccess({ course, url }: { course: Course; url: string 
       </DeepPanel>
 
       <div className="flex flex-wrap items-center gap-3">
-        {href && (
+        {url && (
           <a
-            href={href}
+            href={url}
             target="_blank"
             rel="noreferrer"
             className={buttonClasses({ variant: "secondary" })}

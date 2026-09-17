@@ -7,6 +7,7 @@ export const creatorKeys = {
   details: () => [...creatorKeys.all, "detail"] as const,
   detail: (id: string) => [...creatorKeys.details(), id] as const,
   subdomainCheck: (value: string) => [...creatorKeys.all, "subdomain", value] as const,
+  invoices: (id: string) => [...creatorKeys.all, "invoices", id] as const,
 };
 
 export const authKeys = {

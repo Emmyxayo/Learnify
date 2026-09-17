@@ -52,3 +52,20 @@ export const isStalled = (e: Enrolment) => e.status === "stalled";
 
 /** Lessons sent but not yet worked through. */
 export const lessonsRemaining = (e: Enrolment) => e.lessonsTotal - e.lessonsDelivered;
+
+/**
+ * Students who still have lessons coming.
+ *
+ * Active and stalled both count: a stalled student has stopped
+ * opening messages, not stopped being sent them, and cutting delivery
+ * affects them exactly as much. Completed and refunded do not — there
+ * is nothing left to stop.
+ *
+ * This is the number a disconnect confirmation has to show. "Are you
+ * sure?" is not a question anybody can answer; "this stops lessons for
+ * 47 students" is.
+ */
+export const stillReceiving = (e: Enrolment) => e.status === "active" || e.status === "stalled";
+
+export const activeDeliveryCount = (enrolments: Enrolment[]): number =>
+  enrolments.filter(stillReceiving).length;

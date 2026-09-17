@@ -13,6 +13,7 @@ import {
   type IdentityDocument,
 } from "@core/entities/creator";
 import { cn } from "@shared/lib/cn";
+import { StepContinue, StepSkip } from "./step-chrome";
 
 const DOCUMENT_HINT: Record<IdentityDocument, string> = {
   bvn: "Dial *565*0# on the number linked to your bank account.",
@@ -25,7 +26,7 @@ const DOCUMENT_HINT: Record<IdentityDocument, string> = {
  * while the check runs until morning can still move on and build a
  * course. Withdrawals are what wait, and capabilities() says so.
  */
-export function StepIdentity({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+export function StepIdentity({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const { identity } = creator;
 
   if (identity.status === "pending") {
@@ -36,7 +37,7 @@ export function StepIdentity({ creator, onDone }: { creator: Creator; onDone: ()
           This usually clears within a few hours. Nothing here is waiting on it — carry on setting up,
           and start building a course while you wait.
         </StatusBanner>
-        <Button size="lg" onClick={onDone}>Continue</Button>
+        <StepContinue onDone={onDone} />
       </div>
     );
   }
@@ -49,7 +50,7 @@ export function StepIdentity({ creator, onDone }: { creator: Creator; onDone: ()
           {IDENTITY_DOCUMENT_LABELS[identity.document]} ending {identity.last4}. Payouts will go to an
           account in this name.
         </StatusBanner>
-        <Button size="lg" onClick={onDone}>Continue</Button>
+        <StepContinue onDone={onDone} />
       </div>
     );
   }
@@ -57,7 +58,7 @@ export function StepIdentity({ creator, onDone }: { creator: Creator; onDone: ()
   return <IdentityForm creator={creator} onDone={onDone} />;
 }
 
-function IdentityForm({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+function IdentityForm({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const { identity } = creator;
   const rejected = identity.status === "rejected" ? identity : null;
   const submit = useSubmitIdentity(creator.id);
@@ -165,13 +166,14 @@ function IdentityForm({ creator, onDone }: { creator: Creator; onDone: () => voi
         </form>
       )}
 
-      <p className="text-sm text-muted">
-        Checks can take a few hours.{" "}
-        <button type="button" onClick={onDone} className="font-semibold text-brand hover:underline">
-          Skip for now
-        </button>{" "}
-        and come back — you only need this before withdrawing money.
-      </p>
+      <StepSkip onDone={onDone}>
+        {(skip) => (
+          <>
+            Checks can take a few hours. {skip} and come back — you only need this before
+            withdrawing money.
+          </>
+        )}
+      </StepSkip>
     </div>
   );
 }

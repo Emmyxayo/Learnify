@@ -2,48 +2,222 @@ import { faker } from "@faker-js/faker";
 import type { Course, CourseGeneration, Module, Lesson, Category } from "@core/entities/course";
 import { LESSON_AI_FIELDS, MODULE_AI_FIELDS } from "@core/entities/course";
 import { naira } from "@core/value-objects/money";
+import { DEMO_CREATOR_ID } from "@shared/lib/demo";
 
 // Fixed seed = identical data on every reload. Design review and
 // screenshots stay stable, and diffs stay readable.
 faker.seed(20260911);
 
-const CREATOR_ID = "creator_001";
+/* The demo account is configuration; fixtures follow it. */
+const CREATOR_ID = DEMO_CREATOR_ID;
 const CREATOR_NAME = "Grace Adeyemi";
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function makeLessons(moduleId: string, titles: string[]): Lesson[] {
-  return titles.map((title, i) => ({
-    id: `${moduleId}_l${i + 1}`,
-    moduleId,
-    title,
-    body: faker.lorem.paragraphs(2),
-    order: i,
-    attachments:
-      i % 3 === 0
-        ? [{ id: faker.string.uuid(), kind: "pdf" as const, name: `${slugify(title)}.pdf`, url: "#", sizeBytes: 480_000 }]
-        : [],
-    hasQuiz: i % 2 === 0,
-    /* Straight out of the builder: nothing reviewed yet, which is
-       exactly the state the review screen has to be designed for. */
-    aiFields: [...LESSON_AI_FIELDS],
-  }));
+/**
+ * A lesson is either a title with filler behind it, or a title with
+ * the words a student would actually receive.
+ *
+ * Filler is the right default for a dozen courses that exist to fill
+ * a list — nobody opens them, and writing out eighty lessons of
+ * plausible prose would be work that no screen ever shows. It is the
+ * wrong default for exactly one course. See DMM_MODULES.
+ */
+type LessonSeed = string | { title: string; body: string };
+
+function makeLessons(moduleId: string, lessons: LessonSeed[]): Lesson[] {
+  return lessons.map((lesson, i) => {
+    const title = typeof lesson === "string" ? lesson : lesson.title;
+    const body = typeof lesson === "string" ? faker.lorem.paragraphs(2) : lesson.body;
+
+    return {
+      id: `${moduleId}_l${i + 1}`,
+      moduleId,
+      title,
+      body,
+      order: i,
+      attachments:
+        i % 3 === 0
+          ? [{ id: faker.string.uuid(), kind: "pdf" as const, name: `${slugify(title)}.pdf`, url: "#", sizeBytes: 480_000 }]
+          : [],
+      hasQuiz: i % 2 === 0,
+      /* Straight out of the builder: nothing reviewed yet, which is
+         exactly the state the review screen has to be designed for. */
+      aiFields: [...LESSON_AI_FIELDS],
+    };
+  });
 }
 
-function makeModule(courseId: string, order: number, title: string, objectives: string[], lessonTitles: string[]): Module {
+type ModulePlan = { title: string; objectives: string[]; lessons: LessonSeed[] };
+
+function makeModule(courseId: string, order: number, plan: ModulePlan): Module {
   const id = `${courseId}_m${order + 1}`;
   return {
     id,
     courseId,
-    title,
-    objectives: objectives.map((text, i) => ({ id: `${id}_o${i + 1}`, text, aiGenerated: true })),
+    title: plan.title,
+    objectives: plan.objectives.map((text, i) => ({ id: `${id}_o${i + 1}`, text, aiGenerated: true })),
     order,
-    lessons: makeLessons(id, lessonTitles),
+    lessons: makeLessons(id, plan.lessons),
     aiFields: [...MODULE_AI_FIELDS],
   };
 }
+
+/** Shape without substance: enough structure to lay out a screen. */
+const GENERIC_MODULES: ModulePlan[] = [
+  {
+    title: "Getting the foundations right",
+    objectives: ["Explain the core idea in your own words", "Identify who this is for"],
+    lessons: ["Why this matters", "The one mistake everyone makes", "Your first exercise"],
+  },
+  {
+    title: "Putting it into practice",
+    objectives: ["Apply the framework to your own situation", "Measure whether it worked"],
+    lessons: ["The practical framework", "Working through a real example", "Common obstacles"],
+  },
+  {
+    title: "Going further",
+    objectives: ["Scale what is working", "Know when to stop"],
+    lessons: ["Scaling up", "Where people get stuck", "Your final assignment"],
+  },
+];
+
+/* ============================================================
+   Digital Marketing Masterclass — written, not generated
+
+   The one course with real words in it, because it is the one the
+   public marketing pages point at. Its sales page is the only place
+   a student sees what they would actually receive, and its first
+   lesson is what the "Your first lesson" preview renders. A lesson
+   of Latin there undoes every honest sentence on the landing page.
+
+   Written as messages, not as notes. Each one is short enough to
+   read standing up, says one thing, and ends with something to go
+   and do — which is what a lesson arriving in a chat has to be.
+   Notes are what you write when the reader came to the page; a
+   WhatsApp lesson interrupts someone, so it earns the interruption
+   or it gets swiped away.
+
+   The first body is kept under the sales page's 320-character
+   excerpt so it renders whole. A preview that ends in an ellipsis
+   is a preview of a lesson that was too long.
+   ============================================================ */
+
+const DMM_MODULES: ModulePlan[] = [
+  {
+    title: "Find the customer you already have",
+    objectives: [
+      "Name the customer who has actually paid you",
+      "Say what you sell in one sentence that is not vague",
+    ],
+    lessons: [
+      {
+        title: "Who is actually paying you",
+        body: `Open your bank app. Look at the last ten payments that came in.
+
+Write down what each person bought and how they found you. That list is your real customer — not the one in your head. The one who has already paid.
+
+Reply DONE when your ten are written.`,
+      },
+      {
+        title: "Where your customer spends their evenings",
+        body: `Take yesterday's list. Beside each name, write where you think that person was at 9pm. WhatsApp status. Instagram. A church or school group. Facebook Marketplace. Nowhere.
+
+You are guessing, and that is fine for now.
+
+Then message two of them and ask. Two answers are worth more than ten guesses, and nobody minds being asked.`,
+      },
+      {
+        title: "The one sentence that sells",
+        body: `Say this out loud until it stops sounding awkward:
+
+I help ______ get ______ without ______.
+
+"I help shop owners in Surulere get repeat customers without paying for ads."
+
+If yours could describe your competitor too, it is still vague. Send me yours in this chat and I will tell you which part to cut.`,
+      },
+    ],
+  },
+  {
+    title: "Show up where they already are",
+    objectives: [
+      "Set up a business number that keeps work out of your personal chat",
+      "Run one small advert and read what it tells you",
+    ],
+    lessons: [
+      {
+        title: "Set up WhatsApp Business properly",
+        body: `Move your business number to WhatsApp Business today. It is free, and it keeps customers out of the chat where your family lives.
+
+Three things to fill in: your catalogue, your away message, your opening hours.
+
+Twenty minutes, once. Everything after this lesson assumes it is done.`,
+      },
+      {
+        title: "Post when your customer is awake",
+        body: `Most small business accounts post at midday — when their customer is at work with their phone face down on the desk.
+
+Three hours that are not midday: 6:30am on the bus, 1pm at break, 9pm after dinner.
+
+Pick one. Post at that hour every day this week. By Sunday you will know which one your customer keeps.`,
+      },
+      {
+        title: "Your first ₦5,000 advert",
+        body: `Do not boost a post. Boosting is how ₦5,000 turns into nothing you can learn from.
+
+Instead: one advert, one audience, one action. Your own state, the age range that matches your ten names, and a button that opens WhatsApp.
+
+Three days, then stop. ₦5,000 is not a marketing budget — it is what it costs to find out whether the advert works.`,
+      },
+    ],
+  },
+  {
+    title: "Turn attention into money",
+    objectives: [
+      "Reopen the conversations you wrote off as lost",
+      "Decide what to stop paying for, using a number rather than a feeling",
+    ],
+    lessons: [
+      {
+        title: "The follow-up that closes",
+        body: `Somebody asked your price last week and never replied. You have been calling that a lost sale. It is not. It is an unfinished conversation.
+
+Send this today, exactly: "Good afternoon. Are you still considering the ____? Happy to answer anything."
+
+Send it to five people. Tell me how many answered — it is usually two.`,
+      },
+      {
+        title: "Know when to stop spending",
+        body: `An advert that has run seven days and brought nothing is not unlucky. It has answered you.
+
+Turn it off. Do not raise the budget to give it a chance — that is the most expensive sentence in this business.
+
+Money moves to what is already working. Never to what might.`,
+      },
+      {
+        title: "Your thirty-day plan",
+        body: `Three lines on paper, on the wall where you work:
+
+1. The one customer you are chasing
+2. The one place you show up daily
+3. The one number you check on Sunday
+
+Thirty days. If that number has not moved by week three, change the place — never the customer.
+
+That is the course. Go and sell something.`,
+      },
+    ],
+  },
+];
+
+const DMM_DESCRIPTION = `Six years of selling to Nigerian customers, cut down to nine lessons you can read on a danfo.
+
+No theory, no funnels drawn on a whiteboard. Every lesson gives you one thing to do that day, usually in under twenty minutes, and most of them cost nothing. The two that cost money tell you exactly how much and when to stop.
+
+For people already selling something — a shop, a service, a small brand — who know they should be marketing it properly and have never had thirty clear minutes to work out how.`;
 
 type Seed = {
   id: string;
@@ -59,10 +233,15 @@ type Seed = {
   status: Course["status"];
   /** Defaults to creator_001. Set it to reach another creator's list. */
   creatorId?: string;
+  /** Written copy. Falls back to filler, like the lessons do. */
+  description?: string;
+  modules?: ModulePlan[];
 };
 
 const SEEDS: Seed[] = [
-  { id: "c_dmm",  title: "Digital Marketing Masterclass", subtitle: "Reach customers where they already are", category: "business", level: "intermediate", price: 15000, compareAt: 25000, rating: 4.8, ratingCount: 96, enrolments: 320, status: "published" },
+  /* The course every public page points at, and so the only one
+     carrying real words. See DMM_MODULES. */
+  { id: "c_dmm",  title: "Digital Marketing Masterclass", subtitle: "Reach customers where they already are", category: "business", level: "intermediate", price: 15000, compareAt: 25000, rating: 4.8, ratingCount: 96, enrolments: 320, status: "published", description: DMM_DESCRIPTION, modules: DMM_MODULES },
   { id: "c_bfcl", title: "Biblical Foundations of Christian Leadership", subtitle: "Six weeks of servant leadership, straight to WhatsApp", category: "ministry", level: "beginner", price: 5000, rating: 4.9, ratingCount: 141, enrolments: 410, status: "published" },
   { id: "c_efb",  title: "Entrepreneurship for Beginners", subtitle: "From idea to first customer", category: "business", level: "beginner", price: 10000, rating: 4.6, ratingCount: 52, enrolments: 180, status: "published" },
   { id: "c_xls",  title: "Excel for Business", subtitle: "The twenty formulas that do ninety percent of the work", category: "technology", level: "beginner", price: 0, rating: 4.5, ratingCount: 188, enrolments: 540, status: "published" },
@@ -133,17 +312,9 @@ function buildGeneration(seed: Seed): CourseGeneration | null {
 }
 
 function buildCourse(seed: Seed): Course {
-  const modules = [
-    makeModule(seed.id, 0, "Getting the foundations right",
-      ["Explain the core idea in your own words", "Identify who this is for"],
-      ["Why this matters", "The one mistake everyone makes", "Your first exercise"]),
-    makeModule(seed.id, 1, "Putting it into practice",
-      ["Apply the framework to your own situation", "Measure whether it worked"],
-      ["The practical framework", "Working through a real example", "Common obstacles"]),
-    makeModule(seed.id, 2, "Going further",
-      ["Scale what is working", "Know when to stop"],
-      ["Scaling up", "Where people get stuck", "Your final assignment"]),
-  ];
+  const modules = (seed.modules ?? GENERIC_MODULES).map((plan, i) =>
+    makeModule(seed.id, i, plan)
+  );
 
   const generation = buildGeneration(seed);
   const settled = seed.status === "published" || seed.status === "archived";
@@ -155,7 +326,7 @@ function buildCourse(seed: Seed): Course {
     slug: slugify(seed.title),
     title: seed.title,
     subtitle: seed.subtitle,
-    description: faker.lorem.paragraphs(3),
+    description: seed.description ?? faker.lorem.paragraphs(3),
     category: seed.category,
     level: seed.level,
     status: seed.status,
@@ -180,4 +351,3 @@ function buildCourse(seed: Seed): Course {
 }
 
 export const COURSE_FIXTURES: Course[] = SEEDS.map(buildCourse);
-export const CURRENT_CREATOR_ID = CREATOR_ID;

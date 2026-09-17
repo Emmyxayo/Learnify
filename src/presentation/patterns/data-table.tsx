@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   flexRender,
@@ -123,7 +123,6 @@ export function DataTable<T>({
   const searchColumn = searchColumnId ? table.getColumn(searchColumnId) : undefined;
 
   const rows = table.getRowModel().rows;
-  const filtered = columnFilters.length > 0 || search.trim().length > 0;
 
   const toolbar = (filters.length > 0 || searchColumn) && (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

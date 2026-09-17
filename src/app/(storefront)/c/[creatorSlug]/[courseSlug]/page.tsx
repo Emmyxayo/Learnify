@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getSalesPage } from "@app-layer/storefront/sales-page";
 import { SalesPage } from "@ui/patterns/storefront/sales-page";
-import { absoluteUrl, courseUrl } from "@shared/lib/site";
+import { coursePath, publicCourseUrl } from "@shared/lib/site";
 import { formatNaira } from "@shared/lib/format";
 import { isFree } from "@core/value-objects/money";
 
@@ -23,7 +23,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const { course, storefront } = result;
   const price = isFree(course.price) ? "Free" : formatNaira(course.price.amount);
-  const canonical = absoluteUrl(courseUrl(storefront.subdomain, course.slug));
+  /* The canonical is the shareable address, which in subdomain mode is
+     a different host from the one serving this request. */
+  const canonical = publicCourseUrl(storefront.subdomain, course.slug);
 
   return {
     title: `${course.title} — ${storefront.academyName}`,
@@ -52,7 +54,7 @@ export default async function Page({ params }: { params: Params }) {
   /* A retired subdomain resolves but does not render: one page living
      at two URLs splits the canonical, and the next person to forward
      it would pass on the dead address. */
-  if (result.outcome === "moved") permanentRedirect(courseUrl(result.creatorSlug, courseSlug));
+  if (result.outcome === "moved") permanentRedirect(coursePath(result.creatorSlug, courseSlug));
   if (result.outcome === "not-found") notFound();
 
   return (

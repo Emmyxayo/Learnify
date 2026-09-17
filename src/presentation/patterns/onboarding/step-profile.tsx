@@ -10,11 +10,13 @@ import { useUpdateProfile } from "@app-layer/creator/queries";
 import { CATEGORIES, CATEGORY_LABELS } from "@core/entities/course";
 import type { Category } from "@core/entities/course";
 import type { Creator } from "@core/entities/creator";
-import { subdomainFromAcademyName, subdomainUrl } from "@core/value-objects/subdomain";
+import { subdomainFromAcademyName } from "@core/value-objects/subdomain";
+import { academyBase } from "@shared/lib/site";
+import { SavedNote } from "./step-chrome";
 
 const BIO_MAX = 280;
 
-export function StepProfile({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+export function StepProfile({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const save = useUpdateProfile(creator.id);
 
   const [academyName, setAcademyName] = useState(creator.profile?.academyName ?? "");
@@ -31,7 +33,7 @@ export function StepProfile({ creator, onDone }: { creator: Creator; onDone: () 
      to one, since this is what students will see. */
   const previewAddress =
     !creator.subdomain.value && academyName.trim().length >= 2
-      ? subdomainUrl(subdomainFromAcademyName(academyName))
+      ? academyBase(subdomainFromAcademyName(academyName))
       : null;
 
   function submit(e: React.FormEvent) {
@@ -108,10 +110,14 @@ export function StepProfile({ creator, onDone }: { creator: Creator; onDone: () 
         )}
       </Field>
 
-      <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={save.isPending}>
-        {save.isPending && <Spinner label="" />}
-        {save.isPending ? "Saving" : "Save and continue"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={save.isPending}>
+          {save.isPending && <Spinner label="" />}
+          {save.isPending ? "Saving" : onDone ? "Save and continue" : "Save changes"}
+        </Button>
+        {/* Settings has no navigation to stand in for the acknowledgement. */}
+        <SavedNote show={!onDone && save.isSuccess} />
+      </div>
     </form>
   );
 }

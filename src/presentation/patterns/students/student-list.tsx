@@ -16,12 +16,18 @@ import {
   type Enrolment,
 } from "@core/entities/student";
 
+/** Stable identity for the loading and error cases. */
+const NO_ROWS: Enrolment[] = [];
+
 export function StudentList() {
   const { creator } = useSession();
   const enrolments = useEnrolments(creator?.id ?? null);
   const courses = useCreatorCourses(creator?.id ?? "");
 
-  const rows = enrolments.data ?? [];
+  /* NO_ROWS rather than a fresh [] — a new array every render gives
+     every useMemo below a changed dependency, so they recompute on
+     each pass and memoising them achieves nothing. */
+  const rows = enrolments.data ?? NO_ROWS;
 
   /* Course titles come from the courses the creator actually has, so
      the filter can never offer one with nobody in it. */

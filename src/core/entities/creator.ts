@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { PhoneSchema } from "../value-objects/phone";
-import { subdomainUrl } from "../value-objects/subdomain";
 import { PlanTierSchema } from "./plan";
 import { CategorySchema } from "./course";
 
@@ -223,6 +222,13 @@ export type CreatorSubdomain = z.infer<typeof CreatorSubdomainSchema>;
 
 export const CreatorBrandingSchema = z.object({
   brandColor: z.string().nullable(),
+  /**
+   * The academy's mark, shown on the sales page. Distinct from
+   * avatarUrl, which is the person and belongs to the studio's own
+   * chrome — a creator can be a face in the top bar and a logo on
+   * their storefront without those being the same image.
+   */
+  logoUrl: z.string().nullable(),
 });
 export type CreatorBranding = z.infer<typeof CreatorBrandingSchema>;
 
@@ -474,10 +480,6 @@ export function creatorDestination(c: Creator): CreatorDestination {
   if (c.profile === null) return { area: "setup", step: "profile" };
   return { area: "studio" };
 }
-
-/** The academy's public address, or null before step 1. */
-export const subdomainLink = (c: Creator): string | null =>
-  c.subdomain.value ? subdomainUrl(c.subdomain.value) : null;
 
 export const capability = (c: Creator, name: CapabilityName): Capability =>
   capabilities(c)[name];

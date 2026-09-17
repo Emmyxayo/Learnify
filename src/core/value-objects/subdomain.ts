@@ -1,12 +1,18 @@
 import { z } from "zod";
 
 /**
- * <name>.learnify.com is the creator's address for the life of the
- * account, so the rules live here rather than inside the wizard step
+ * A creator's address is theirs for the life of the account, so the
+ * rules about its SHAPE live here rather than inside the wizard step
  * that happens to collect it first.
+ *
+ * What host that label resolves to is deliberately not here. It is
+ * deployment configuration — see shared/lib/site.ts — because the
+ * answer differs between a path-based demo and a custom domain with
+ * wildcard DNS. This file used to export a subdomainUrl() that
+ * hardcoded learnify.com, and every screen that called it promised a
+ * creator an address nobody owns.
  */
 
-export const SUBDOMAIN_ROOT = "learnify.com";
 export const SUBDOMAIN_MIN = 3;
 export const SUBDOMAIN_MAX = 30;
 
@@ -60,8 +66,6 @@ export function validateSubdomainShape(value: string): SubdomainRejection | null
   if (RESERVED_SUBDOMAINS.has(value)) return "reserved";
   return null;
 }
-
-export const subdomainUrl = (value: string) => `${value}.${SUBDOMAIN_ROOT}`;
 
 /**
  * The address a creator gets for free at step 1, derived from the

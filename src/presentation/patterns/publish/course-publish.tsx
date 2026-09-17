@@ -10,13 +10,14 @@ import { StatusBanner } from "@ui/ui/status-banner";
 import { useSession } from "@app-layer/auth/use-session";
 import { useCourse, usePublishCourse, useUpdateCourse } from "@app-layer/course/queries";
 import { lessonCount } from "@core/entities/course";
-import { canPublish, preflight, publicCourseUrl } from "@core/entities/publishing";
+import { canPublish, preflight, publicCourseRef } from "@core/entities/publishing";
 import type { DeliverySchedule } from "@core/value-objects/schedule";
 import type { Money } from "@core/value-objects/money";
 import { ScheduleSection } from "./schedule-section";
 import { PricingSection } from "./pricing-section";
 import { PreflightList } from "./preflight-list";
 import { PublishedSuccess } from "./published-success";
+import { publicCourseUrl } from "@shared/lib/site";
 
 /** Typing a price should not be a request per digit. */
 const PRICE_DEBOUNCE_MS = 600;
@@ -62,7 +63,9 @@ export function CoursePublish({ courseId }: { courseId: string }) {
     );
   }
 
-  const url = publicCourseUrl(creator, course);
+  /* Slugs from core, host from deployment config. */
+  const ref = publicCourseRef(creator, course);
+  const url = ref ? publicCourseUrl(ref.creatorSlug, ref.courseSlug) : null;
 
   /* Published is a terminal state for this screen. Coming back to it
      later shows the link again rather than an editable form, because

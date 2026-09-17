@@ -1,5 +1,5 @@
 import type { Creator } from "@core/entities/creator";
-import { CURRENT_CREATOR_ID } from "./courses";
+import { DEMO_CREATOR_ID } from "@shared/lib/demo";
 
 /**
  * Hand-written, not generated. Each creator exists to make one
@@ -29,7 +29,7 @@ const justNow = () => new Date().toISOString();
 
 export const CREATOR_FIXTURES: Creator[] = [
   {
-    id: CURRENT_CREATOR_ID,
+    id: DEMO_CREATOR_ID,
     fullName: "Grace Adeyemi",
     phone: "+2348031234501",
     phoneVerifiedAt: daysAgo(120),
@@ -49,7 +49,7 @@ export const CREATOR_FIXTURES: Creator[] = [
     /* Deep burgundy. Chosen to be nowhere near Learnify teal, so a
        sales page that still looks teal is visibly broken rather than
        plausibly fine. */
-    branding: { brandColor: "#7A1F3D" },
+    branding: { brandColor: "#7A1F3D", logoUrl: null },
     identity: {
       status: "verified",
       document: "bvn",
@@ -114,7 +114,7 @@ export const CREATOR_FIXTURES: Creator[] = [
     },
     /* A second tenant, a different hue. Two storefronts rendering the
        same markup in two palettes is the whole claim of multi-tenancy. */
-    branding: { brandColor: "#2450C8" },
+    branding: { brandColor: "#2450C8", logoUrl: null },
     /* Submitted as the app starts, so it is genuinely still running.
        It resolves to verified after NEXT_PUBLIC_MOCK_IDENTITY_MS —
        raise that to hold it pending across a reload. */
@@ -161,7 +161,7 @@ export const CREATOR_FIXTURES: Creator[] = [
     /* Deliberately light. White on this is 1.6:1 — unreadable. It is here
        to prove --on-brand flips to ink by luminance rather than being a
        constant with a nice name. */
-    branding: { brandColor: "#F2C511" },
+    branding: { brandColor: "#F2C511", logoUrl: null },
     identity: {
       status: "rejected",
       document: "bvn",
@@ -216,7 +216,7 @@ export const CREATOR_FIXTURES: Creator[] = [
     /* No profile yet, so no address yet. Assigned the moment step 1 lands. */
     /* Never picked one. Renders no override at all, so the page is
        Learnify teal — which is a different thing from picking teal. */
-    branding: { brandColor: null },
+    branding: { brandColor: null, logoUrl: null },
     subdomain: { value: null, assignedAt: null, confirmedAt: null, previous: [] },
     onboarding: {
       resumeStep: "profile",

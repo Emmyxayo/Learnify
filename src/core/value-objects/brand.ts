@@ -148,3 +148,36 @@ export function brandStyle(ramp: BrandRamp | null): Record<string, string> | und
     "--on-brand": ramp.onBrand,
   };
 }
+
+/**
+ * How readable the text resolveBrand picked will be on this colour.
+ *
+ * Takes the two candidate text colours as arguments rather than
+ * naming them, because their real values live in globals.css and
+ * this file is the one place in the product that has sworn off
+ * colour literals. The caller reads --ink and --surface-raised off
+ * the document and passes them in, so the number shown to a creator
+ * is computed against the token that will actually render.
+ *
+ * Null when the brand colour is not a colour.
+ */
+export function brandTextContrast(
+  hex: string | null | undefined,
+  tokens: { ink: string; onDark: string }
+): { usesInk: boolean; ratio: number; rejected: number } | null {
+  const rgb = parseHex(hex ?? "");
+  const ramp = resolveBrand(hex);
+  const ink = parseHex(tokens.ink);
+  const onDark = parseHex(tokens.onDark);
+  if (!rgb || !ramp || !ink || !onDark) return null;
+
+  const usesInk = ramp.onBrand === "var(--ink)";
+  const chosen = usesInk ? ink : onDark;
+  const other = usesInk ? onDark : ink;
+
+  return {
+    usesInk,
+    ratio: contrastRatio(rgb, chosen),
+    rejected: contrastRatio(rgb, other),
+  };
+}

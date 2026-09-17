@@ -1,17 +1,24 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { repositories } from "@infra/container";
 import type {
   Creator,
+  CreatorBranding,
   CreatorProfile,
   OnboardingStep,
   PayoutProvider,
 } from "@core/entities/creator";
-import type { ConnectWhatsAppInput, SubmitIdentityInput } from "@core/ports";
+import type {
+  ChangePlanInput,
+  ConnectWhatsAppInput,
+  SubmitIdentityInput,
+  UpdateAccountInput,
+} from "@core/ports";
 import { normalizeSubdomain, validateSubdomainShape } from "@core/value-objects/subdomain";
 import { authKeys, creatorKeys } from "./query-keys";
+import { courseKeys } from "../course/query-keys";
 
 /**
  * Polls only while something third-party is actually running.
@@ -73,6 +80,71 @@ export const useConfirmSubdomain = (id: string) =>
 
 export const useClaimSubdomain = (id: string) =>
   useCreatorMutation(id, (value: string) => repositories.creators.claimSubdomain(id, value));
+
+export const useUpdateBranding = (id: string) =>
+  useCreatorMutation(id, (branding: CreatorBranding) =>
+    repositories.creators.updateBranding(id, branding)
+  );
+
+export const useUpdateAccount = (id: string) =>
+  useCreatorMutation(id, (input: UpdateAccountInput) =>
+    repositories.creators.updateAccount(id, input)
+  );
+
+/**
+ * Archives the over-limit courses in the same call, so the course
+ * list has to be refetched as well as the creator.
+ */
+export function useChangePlan(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ChangePlanInput) => repositories.creators.changePlan(id, input),
+    onSuccess: (creator) => {
+      qc.setQueryData(creatorKeys.detail(id), creator);
+      qc.setQueryData(authKeys.me(), creator);
+      qc.invalidateQueries({ queryKey: courseKeys.all });
+      qc.invalidateQueries({ queryKey: creatorKeys.invoices(id) });
+    },
+  });
+}
+
+export function useInvoices(id: string | null) {
+  return useQuery({
+    queryKey: creatorKeys.invoices(id ?? ""),
+    queryFn: () => repositories.creators.listInvoices(id!),
+    enabled: Boolean(id),
+    staleTime: 60_000,
+  });
+}
+
+/** Not a mutation of the creator — it returns a challenge, not a Creator. */
+export function useRequestPhoneChange(id: string) {
+  return useMutation({
+    mutationFn: (phone: string) => repositories.creators.requestPhoneChange(id, phone),
+  });
+}
+
+/**
+ * Lands the updated creator in both caches on success only. An ok:false
+ * is a wrong code, not a changed number, and must not touch the cache.
+ */
+export function useConfirmPhoneChange(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ challengeId, code }: { challengeId: string; code: string }) =>
+      repositories.creators.confirmPhoneChange(id, challengeId, code),
+    onSuccess: (result) => {
+      if (!result.ok) return;
+      qc.setQueryData(creatorKeys.detail(id), result.creator);
+      qc.setQueryData(authKeys.me(), result.creator);
+    },
+  });
+}
+
+/** Plain callback, like useUploadBackground — nothing to cache. */
+export function useUploadLogo() {
+  return useCallback((file: File) => repositories.creators.uploadLogo(file), []);
+}
 
 export const useDeferStep = (id: string) =>
   useCreatorMutation(id, (step: OnboardingStep) => repositories.creators.deferStep(id, step));

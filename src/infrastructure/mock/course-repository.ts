@@ -1,4 +1,4 @@
-import type { CourseRepository, CourseFilters, UploadProgress } from "@core/ports";
+import type { CourseRepository, CourseFilters } from "@core/ports";
 import type { Course, CreateCourseInput, GenerationPhase } from "@core/entities/course";
 import { GENERATION_PHASES } from "@core/entities/course";
 import type { SourceFile } from "@core/value-objects/source-file";
@@ -155,6 +155,33 @@ function commit(course: Course): Course {
 
 const tickAll = (list: Course[]) => list.map(tick);
 
+/* ============================================================
+   Seeded numbers do not leave by the public door
+
+   A rating and an enrolment count that came out of a fixture are
+   fine on the creator's own screens: they are looking at a demo
+   account and they know it. On a public sales page the same two
+   numbers become "96 people rated this 4.8" and "320 people bought
+   it", said to a stranger who has no way to know the figures were
+   invented — and the landing page now sends strangers to exactly
+   that page as proof the product is real.
+
+   So the public reads strip them. Not the entity, not the fixtures,
+   not the studio: only the two methods a person who is not signed
+   in can reach. The http repository does no such thing, because
+   there the numbers will have been earned.
+
+   Setting them to the empty values rather than hiding them in the
+   component matters — a course published this morning genuinely has
+   no rating and no students, so the sales page has to render that
+   state correctly regardless. This makes every fixture course
+   exercise it.
+   ============================================================ */
+
+function withoutSeededProof(course: Course): Course {
+  return { ...course, rating: null, ratingCount: 0, enrolmentCount: 0 };
+}
+
 /* --- Uploads -------------------------------------------------
    Held by id until a generation claims them, because the creator
    picks their material before the course exists.
@@ -166,7 +193,7 @@ const UPLOAD_BASE_MS = Number(process.env.NEXT_PUBLIC_MOCK_UPLOAD_MS ?? 1_200);
 
 export const mockCourseRepository: CourseRepository = {
   async listPublished(filters: CourseFilters = {}) {
-    let result = tickAll(courses).filter((c) => c.status === "published");
+    let result = tickAll(courses).filter((c) => c.status === "published").map(withoutSeededProof);
 
     if (filters.category) result = result.filter((c) => c.category === filters.category);
 
@@ -215,7 +242,7 @@ export const mockCourseRepository: CourseRepository = {
     const found = courses.find(
       (c) => c.slug === courseSlug && c.creatorId === creator.id
     );
-    return simulate(found ? tick(found) : null);
+    return simulate(found ? withoutSeededProof(tick(found)) : null);
   },
 
   async create(input: CreateCourseInput) {
@@ -358,4 +385,24 @@ function requireCourse(id: string): Course {
   const course = courses.find((c) => c.id === id);
   if (!course) throw new MockApiError(`Course ${id} not found.`);
   return course;
+}
+
+/**
+ * Retires courses so an account fits a smaller plan.
+ *
+ * Exported for the creator repository's changePlan, which has to
+ * change the tier and clear the overage in one operation — see
+ * ChangePlanInput. A mock crossing from one repository to another is
+ * the honest shape here: on the real backend both rows move inside
+ * one transaction, and splitting them in the mock would hide the one
+ * failure mode the design exists to prevent.
+ *
+ * Archiving is a catalogue action. It takes the sales page offline
+ * and stops new enrolments; it does not touch a single Enrolment, so
+ * students already mid-course keep receiving lessons. See
+ * ARCHIVE_CONSEQUENCE in core/entities/subscription.ts.
+ */
+export function archiveCourses(ids: string[]): void {
+  const archiving = new Set(ids);
+  courses = courses.map((c) => (archiving.has(c.id) ? { ...c, status: "archived" } : c));
 }

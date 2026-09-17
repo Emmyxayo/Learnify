@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { naira, type Money } from "../value-objects/money";
 
 export const PlanTierSchema = z.enum(["starter", "growth", "pro", "enterprise"]);
 export type PlanTier = z.infer<typeof PlanTierSchema>;
@@ -48,6 +49,30 @@ export const MIN_TIER_FOR: Record<Feature, PlanTier> = {
 export function hasFeature(tier: PlanTier, feature: Feature): boolean {
   return TIER_RANK[tier] >= TIER_RANK[MIN_TIER_FOR[feature]];
 }
+
+/* ============================================================
+   What each plan costs
+
+   Here rather than in a fixture, because more than one screen quotes
+   it: the pricing page, the plan switcher in settings, and the
+   billing history that has to agree with both. A price that lives in
+   mock data cannot be read by a marketing page at all, and a price
+   copied into two places is a price that will disagree with itself.
+
+   Monthly, in kobo. Enterprise is a real published number rather than
+   "contact us" — a Nigerian creator deciding between tiers should not
+   have to book a call to find out whether they can afford one.
+   ============================================================ */
+
+export const PLAN_PRICE: Record<PlanTier, Money> = {
+  starter: naira(0),
+  growth: naira(9_500),
+  pro: naira(24_000),
+  enterprise: naira(120_000),
+};
+
+/** Starter is free, which is a different thing from cheap. */
+export const isFreePlan = (tier: PlanTier) => PLAN_PRICE[tier].amount === 0;
 
 export const PLAN_LIMITS: Record<PlanTier, { courses: number | null; students: number | null; commissionPercent: number }> = {
   starter:    { courses: 1,    students: 50,   commissionPercent: 30 },
@@ -127,4 +152,91 @@ export const PLAN_BLOCKED_COPY: Record<
         : `Your ${PLAN_TIER_LABELS[tier]} plan covers ${limit} students.`;
     },
   },
+};
+
+/* ============================================================
+   Changing plan
+
+   A tier change is arithmetic the creator has to see before they
+   commit, not after. Two numbers move (what they may have, what
+   they are charged) and a set of features moves with them, so all
+   of it is computed in one place and both the upgrade and the
+   downgrade screens read the same answer.
+
+   No Course import here on purpose — this file stays a leaf. The
+   caller counts its own courses and students and hands the numbers
+   in, exactly as courseAllowance() already works.
+   ============================================================ */
+
+export type PlanChangeDirection = "upgrade" | "downgrade" | "same";
+
+export interface PlanUsage {
+  /** Courses that count — the ones countsTowardPlanLimit() agrees with. */
+  courses: number;
+  students: number;
+}
+
+export interface LimitPressure {
+  have: number;
+  /** Null is unlimited, which is different from zero. */
+  allowed: number | null;
+  /** How many are past the line. Zero when within it. */
+  over: number;
+}
+
+export interface PlanChangeImpact {
+  from: PlanTier;
+  to: PlanTier;
+  direction: PlanChangeDirection;
+  /** Percent taken of each sale. Down is good, so delta is to - from. */
+  commission: { from: number; to: number; delta: number };
+  courses: LimitPressure;
+  students: LimitPressure;
+  featuresLost: Feature[];
+  featuresGained: Feature[];
+}
+
+function pressure(have: number, allowed: number | null): LimitPressure {
+  return { have, allowed, over: allowed === null ? 0 : Math.max(0, have - allowed) };
+}
+
+export function planChangeImpact(
+  from: PlanTier,
+  to: PlanTier,
+  usage: PlanUsage
+): PlanChangeImpact {
+  const limits = PLAN_LIMITS[to];
+  const rank = TIER_RANK[to] - TIER_RANK[from];
+
+  return {
+    from,
+    to,
+    direction: rank > 0 ? "upgrade" : rank < 0 ? "downgrade" : "same",
+    commission: {
+      from: PLAN_LIMITS[from].commissionPercent,
+      to: limits.commissionPercent,
+      delta: limits.commissionPercent - PLAN_LIMITS[from].commissionPercent,
+    },
+    courses: pressure(usage.courses, limits.courses),
+    students: pressure(usage.students, limits.students),
+    featuresLost: FEATURES.filter((f) => hasFeature(from, f) && !hasFeature(to, f)),
+    featuresGained: FEATURES.filter((f) => !hasFeature(from, f) && hasFeature(to, f)),
+  };
+}
+
+/** Nothing about this change needs a decision from the creator first. */
+export const isCleanChange = (impact: PlanChangeImpact) =>
+  impact.courses.over === 0 && impact.students.over === 0 && impact.featuresLost.length === 0;
+
+export const FEATURE_LABELS: Record<Feature, string> = {
+  "ai-course-builder": "AI course builder",
+  "whatsapp-delivery": "WhatsApp delivery",
+  "basic-certificates": "Certificates",
+  "custom-certificates": "Custom certificate design",
+  "ai-tutor": "AI tutor",
+  "ai-voice-teacher": "AI voice teacher",
+  analytics: "Analytics",
+  crm: "CRM",
+  "api-access": "API access",
+  "white-label": "White labelling",
 };

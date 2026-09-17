@@ -1,4 +1,4 @@
-import type { StorefrontRepository, StartEnrolmentInput } from "@core/ports";
+import type { StorefrontRepository } from "@core/ports";
 import type {
   CheckoutOutcome,
   EnrolDetails,
@@ -34,7 +34,7 @@ function project(creator: Creator): Storefront {
     bio: creator.profile?.bio ?? "",
     subdomain: creator.subdomain.value!,
     brandColor: creator.branding.brandColor,
-    avatarUrl: creator.avatarUrl,
+    logoUrl: creator.branding.logoUrl,
     whatsappNumber:
       creator.whatsapp.status === "connected" ? creator.whatsapp.phone : null,
     canAcceptPayments: creator.payments.status === "connected",

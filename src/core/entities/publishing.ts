@@ -4,7 +4,6 @@ import type { Creator, OnboardingStep } from "./creator";
 import { capability } from "./creator";
 import { isFree } from "../value-objects/money";
 import { describeSchedule } from "../value-objects/schedule";
-import { subdomainUrl } from "../value-objects/subdomain";
 import type { Money } from "../value-objects/money";
 
 /* ============================================================
@@ -109,9 +108,10 @@ export function preflight(course: Course, creator: Creator): PreflightItem[] {
        */
       ok: creator.subdomain.value !== null,
       label: "Public address",
-      detail: creator.subdomain.value
-        ? subdomainUrl(creator.subdomain.value)
-        : "Name your academy to get your address.",
+      /* The bare address, not a host. Which host it resolves to is a
+         deployment question, and a checklist that guesses at one is
+         how the publish screen came to promise a domain nobody owns. */
+      detail: creator.subdomain.value ?? "Name your academy to get your address.",
       target: { kind: "onboarding", step: "profile" },
     },
   ];
@@ -138,6 +138,23 @@ export function preflight(course: Course, creator: Creator): PreflightItem[] {
 export const canPublish = (items: PreflightItem[]) => items.every((i) => i.ok);
 export const blockers = (items: PreflightItem[]) => items.filter((i) => !i.ok);
 
-/** What the creator pastes into a WhatsApp group. The deliverable. */
-export const publicCourseUrl = (creator: Creator, course: Course): string | null =>
-  creator.subdomain.value ? `${subdomainUrl(creator.subdomain.value)}/${course.slug}` : null;
+/**
+ * The two slugs that identify a course publicly.
+ *
+ * Not a URL. Turning these into one needs to know whether this
+ * deployment serves academies on subdomains or on paths, and that is
+ * environment configuration — which core has no business reading.
+ * shared/lib/site.ts owns the answer; this owns the identity.
+ *
+ * Null until the academy has an address at all, which is only true
+ * before step 1 of setup.
+ */
+export interface PublicCourseRef {
+  creatorSlug: string;
+  courseSlug: string;
+}
+
+export const publicCourseRef = (creator: Creator, course: Course): PublicCourseRef | null =>
+  creator.subdomain.value
+    ? { creatorSlug: creator.subdomain.value, courseSlug: course.slug }
+    : null;

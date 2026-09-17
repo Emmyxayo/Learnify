@@ -20,5 +20,8 @@ export type {
   SubmitIdentityInput,
   StartPaymentsConnectionResult,
   ConnectWhatsAppInput,
+  UpdateAccountInput,
+  UploadedLogo,
+  ChangePlanInput,
 } from "./creator-repository";
 export type { StorefrontRepository, StartEnrolmentInput } from "./storefront-repository";

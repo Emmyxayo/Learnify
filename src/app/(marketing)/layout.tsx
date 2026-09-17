@@ -1,12 +1,20 @@
 import type { ReactNode } from "react";
-import { Providers } from "../providers";
+import { MarketingHeader, MarketingFooter } from "@ui/patterns/marketing/marketing-nav";
 
 /**
- * The landing page renders the live engine, which reads a query, so
- * it needs a client cache. It sits in its own group rather than in
- * the root layout so the public verification pages — which have no
- * client data at all — do not inherit one.
+ * The public marketing shell. No Providers: every page under here
+ * renders from static copy and the plan entity, so there is no query
+ * to cache. The landing page's delivery panel is DeliveryFeed fed by
+ * hand rather than LiveEngine, precisely so this stays true — nobody
+ * is signed in here and a polling subscription would be paid for by
+ * the reader's data plan.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
-  return <Providers>{children}</Providers>;
+  return (
+    <div className="flex min-h-dvh flex-col bg-surface">
+      <MarketingHeader />
+      <main className="flex-1">{children}</main>
+      <MarketingFooter />
+    </div>
+  );
 }

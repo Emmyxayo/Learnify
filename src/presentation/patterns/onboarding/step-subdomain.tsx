@@ -9,11 +9,10 @@ import { Spinner } from "@ui/ui/spinner";
 import { StatusBanner } from "@ui/ui/status-banner";
 import { useClaimSubdomain, useConfirmSubdomain, useSubdomainCheck } from "@app-layer/creator/queries";
 import type { Creator } from "@core/entities/creator";
-import {
-  SUBDOMAIN_REJECTION_COPY,
-  SUBDOMAIN_ROOT,
-  subdomainUrl,
-} from "@core/value-objects/subdomain";
+import { SUBDOMAIN_REJECTION_COPY } from "@core/value-objects/subdomain";
+import { ADDRESS_AFFIX, academyBase } from "@shared/lib/site";
+import { cn } from "@shared/lib/cn";
+import { SavedNote } from "./step-chrome";
 
 /**
  * The address already exists — it was assigned from the academy name at
@@ -24,7 +23,7 @@ import {
  * into WhatsApp groups and re-shared for years, so the old one is kept
  * alive rather than freed, and the creator is told that is what happens.
  */
-export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const assigned = creator.subdomain.value;
   const confirm = useConfirmSubdomain(creator.id);
   const claim = useClaimSubdomain(creator.id);
@@ -59,7 +58,7 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
           <div className="flex items-start gap-3 rounded-card border border-border-strong bg-surface-raised p-4">
             <Globe className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-ink">{subdomainUrl(assigned)}</p>
+              <p className="truncate font-semibold text-ink">{academyBase(assigned)}</p>
               <p className="mt-1 text-sm text-muted">
                 Taken from your academy name. This is what students will see on every link you share.
               </p>
@@ -82,6 +81,7 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
             <Button variant="ghost" size="lg" disabled={busy} onClick={() => setEditing(true)}>
               Change it
             </Button>
+            <SavedNote show={!onDone && confirm.isSuccess}>Address kept.</SavedNote>
           </div>
         </>
       ) : (
@@ -89,7 +89,11 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
           <Field
             id="subdomain"
             label="Your address"
-            hint={`Letters, numbers and hyphens. Ends in .${SUBDOMAIN_ROOT}`}
+            hint={
+              ADDRESS_AFFIX.suffix
+                ? `Letters, numbers and hyphens. Ends in ${ADDRESS_AFFIX.suffix}`
+                : "Letters, numbers and hyphens."
+            }
             error={
               check.shapeProblem
                 ? SUBDOMAIN_REJECTION_COPY[check.shapeProblem]
@@ -100,20 +104,34 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
           >
             {(props) => (
               <div className="flex items-stretch gap-0">
+                {/* One of the two, never both: a suffix when academies
+                    live on subdomains, a prefix when they live on
+                    paths. The input itself is the same field either
+                    way — the academy's label. */}
+                {ADDRESS_AFFIX.prefix && (
+                  <span className="flex max-w-[45%] select-none items-center truncate rounded-l-control border border-r-0 border-border-strong bg-surface-sunken px-3 text-sm text-muted">
+                    {ADDRESS_AFFIX.prefix}
+                  </span>
+                )}
                 <Input
                   {...props}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  className="rounded-r-none"
+                  className={cn(
+                    ADDRESS_AFFIX.suffix && "rounded-r-none",
+                    ADDRESS_AFFIX.prefix && "rounded-l-none"
+                  )}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                   disabled={busy}
                   autoFocus
                 />
-                <span className="flex select-none items-center rounded-r-control border border-l-0 border-border-strong bg-surface-sunken px-3 text-sm text-muted">
-                  .{SUBDOMAIN_ROOT}
-                </span>
+                {ADDRESS_AFFIX.suffix && (
+                  <span className="flex select-none items-center rounded-r-control border border-l-0 border-border-strong bg-surface-sunken px-3 text-sm text-muted">
+                    {ADDRESS_AFFIX.suffix}
+                  </span>
+                )}
               </div>
             )}
           </Field>
@@ -129,7 +147,7 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
             )}
             {!check.isChecking && canClaim && (
               <span className="inline-flex items-center gap-1.5 font-medium text-success">
-                <Check className="size-4" aria-hidden /> {subdomainUrl(check.normalized)} is free
+                <Check className="size-4" aria-hidden /> {academyBase(check.normalized)} is free
               </span>
             )}
           </div>
@@ -154,7 +172,7 @@ export function StepSubdomain({ creator, onDone }: { creator: Creator; onDone: (
 
           {changed && (
             <StatusBanner tone="info" title="Your old address keeps working">
-              {subdomainUrl(assigned)} will send people to the new one. Links already shared in
+              {academyBase(assigned)} will send people to the new one. Links already shared in
               WhatsApp groups will not break, and nobody else can take it.
             </StatusBanner>
           )}

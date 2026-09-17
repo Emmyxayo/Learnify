@@ -14,7 +14,10 @@ export const OTP_TTL_SECONDS = 300;              // 5 minutes
 export const OTP_MAX_ATTEMPTS = 5;
 export const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
-export const OtpPurposeSchema = z.enum(["sign-up", "sign-in"]);
+/* change-phone is not a way in — it re-verifies someone already
+   signed in, against a number they do not yet own on this account.
+   It mints no session; see requestPhoneChange on CreatorRepository. */
+export const OtpPurposeSchema = z.enum(["sign-up", "sign-in", "change-phone"]);
 export type OtpPurpose = z.infer<typeof OtpPurposeSchema>;
 
 /**
@@ -100,6 +103,25 @@ export const VerifyOtpResultSchema = z.discriminatedUnion("ok", [
   }),
 ]);
 export type VerifyOtpResult = z.infer<typeof VerifyOtpResultSchema>;
+
+/**
+ * The result of re-verifying a new login number.
+ *
+ * Its own type rather than a reuse of VerifyOtpResult, because that
+ * one carries a session and an isNewCreator flag. Changing a phone
+ * number mints no session and creates nobody — the creator was
+ * already signed in and stays signed in — and returning those fields
+ * anyway would mean two of them were always lies.
+ */
+export const PhoneChangeResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), creator: CreatorSchema }),
+  z.object({
+    ok: z.literal(false),
+    failure: OtpFailureSchema,
+    attemptsRemaining: z.number().int().nonnegative(),
+  }),
+]);
+export type PhoneChangeResult = z.infer<typeof PhoneChangeResultSchema>;
 
 /* ============================================================
    Google — a shortcut, never a way in

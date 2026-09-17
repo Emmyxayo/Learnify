@@ -6,7 +6,7 @@ import { lessonCount } from "@core/entities/course";
 import { describeSchedule, scheduleOutcome } from "@core/value-objects/schedule";
 import { isFree } from "@core/value-objects/money";
 import { formatCount } from "@shared/lib/format";
-import { enrolUrl } from "@shared/lib/site";
+import { enrolPath } from "@shared/lib/site";
 import { buttonClasses } from "@ui/ui/button";
 import { WhatsAppPreview } from "@ui/patterns/whatsapp-preview";
 import { TenantTheme } from "./tenant";
@@ -40,14 +40,14 @@ export function SalesPage({
 }) {
   const lessons = lessonCount(course);
   const outcome = scheduleOutcome(course.schedule, lessons);
-  const href = enrolUrl(creatorSlug, course.slug);
+  const href = enrolPath(creatorSlug, course.slug);
 
   const objectives = course.modules.flatMap((m) => m.objectives.map((o) => o.text));
   const sample = course.modules[0]?.lessons[0];
 
   return (
     <TenantTheme brandColor={storefront.brandColor} className="min-h-dvh bg-surface">
-      <Masthead storefront={storefront} />
+      <StorefrontMasthead storefront={storefront} />
 
       {/* Bottom padding clears the sticky bar. */}
       <main className="mx-auto max-w-2xl px-5 pb-32 pt-6 sm:pb-16">
@@ -59,15 +59,7 @@ export function SalesPage({
 
         <Facts course={course} lessons={lessons} />
 
-        <div className="mt-6 rounded-card border border-border bg-surface-raised p-4">
-          <PriceTag price={course.price} compareAtPrice={course.compareAtPrice} />
-          <Link href={href} className={buttonClasses({ size: "lg", className: "mt-3 w-full" })}>
-            {isFree(course.price) ? "Start this course" : "Enrol now"}
-          </Link>
-          <p className="mt-2 text-center text-xs text-muted">
-            Lessons arrive on WhatsApp. Nothing to download.
-          </p>
-        </div>
+        <StorefrontOffer course={course} href={href} className="mt-6" />
 
         {/* --- How do I get it ----------------------------------
             Placed above the syllabus on purpose. Nobody has bought a
@@ -132,20 +124,85 @@ export function SalesPage({
 
 /* Minimal chrome. The academy's name, because a student needs to know
    whose course this is, and nothing else — no nav, no Learnify logo
-   competing with the creator's brand for the top of their own page. */
-function Masthead({ storefront }: { storefront: Storefront }) {
+   competing with the creator's brand for the top of their own page.
+
+   Exported because the branding settings screen renders this exact
+   component inside its preview. A preview built from a lookalike is a
+   second implementation, and the first time one of them changes the
+   creator is being shown something their students will not see. */
+export function StorefrontMasthead({ storefront }: { storefront: Storefront }) {
   return (
     <header className="border-b border-border bg-surface-raised">
       <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-5 py-3.5">
-        <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-pill bg-brand text-on-brand">
-          <GraduationCap className="size-4" aria-hidden />
-        </span>
+        {storefront.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={storefront.logoUrl}
+            alt=""
+            className="size-7 shrink-0 rounded-pill object-cover"
+          />
+        ) : (
+          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-pill bg-brand text-on-brand">
+            <GraduationCap className="size-4" aria-hidden />
+          </span>
+        )}
         <span className="truncate font-semibold text-ink">{storefront.academyName}</span>
       </div>
     </header>
   );
 }
 
+/**
+ * Price, call to action, and the one line that answers "then what".
+ *
+ * `href` absent renders the button inert but identical — which is what
+ * the branding preview needs, and is the only difference between the
+ * preview and the page a student sees.
+ */
+export function StorefrontOffer({
+  course,
+  href,
+  className,
+}: {
+  course: Course;
+  href?: string;
+  className?: string;
+}) {
+  const label = isFree(course.price) ? "Start this course" : "Enrol now";
+
+  return (
+    <div className={`rounded-card border border-border bg-surface-raised p-4 ${className ?? ""}`}>
+      <PriceTag price={course.price} compareAtPrice={course.compareAtPrice} />
+      {href ? (
+        <Link href={href} className={buttonClasses({ size: "lg", className: "mt-3 w-full" })}>
+          {label}
+        </Link>
+      ) : (
+        <span
+          aria-hidden
+          className={buttonClasses({ size: "lg", className: "mt-3 w-full" })}
+        >
+          {label}
+        </span>
+      )}
+      <p className="mt-2 text-center text-xs text-muted">
+        Lessons arrive on WhatsApp. Nothing to download.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Lessons and level always; rating and student count only if there
+ * are any.
+ *
+ * Both absences are the ordinary case, not a defensive edge. A course
+ * published this morning has no rating and no students, and under the
+ * mocks no public read returns either — a seeded rating shown to a
+ * stranger is a fabricated review. So this row has to read as
+ * finished with only two facts in it, which is why neither missing
+ * value leaves a zero, a grey star row or a gap behind.
+ */
 function Facts({ course, lessons }: { course: Course; lessons: number }) {
   return (
     <ul className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">

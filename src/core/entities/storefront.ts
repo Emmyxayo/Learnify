@@ -27,7 +27,14 @@ export const StorefrontSchema = z.object({
   subdomain: z.string(),
   /** The creator's own hex, or null for Learnify's colours. */
   brandColor: z.string().nullable(),
-  avatarUrl: z.string().nullable(),
+  /**
+   * The academy's mark. Deliberately the branding logo and not the
+   * creator's avatarUrl — one is the business a student is buying
+   * from, the other is a person's face in the studio's top bar, and
+   * putting the second on a sales page is a small privacy leak
+   * dressed up as a default.
+   */
+  logoUrl: z.string().nullable(),
   /**
    * The business number lessons send from, E.164. Public by design —
    * it is the address students are being sold. Null while the

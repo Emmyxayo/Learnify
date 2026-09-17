@@ -14,6 +14,7 @@ import {
   type PayoutProvider,
 } from "@core/entities/creator";
 import { cn } from "@shared/lib/cn";
+import { StepContinue, StepSkip } from "./step-chrome";
 
 const PROVIDER_BLURB: Record<PayoutProvider, string> = {
   paystack: "Most Nigerian banks. Payouts land next working day.",
@@ -26,7 +27,7 @@ const PROVIDER_BLURB: Record<PayoutProvider, string> = {
  * left sitting in — a closed tab mid-handoff is normal, not an edge
  * case, so it has a visible way back.
  */
-export function StepPayments({ creator, onDone }: { creator: Creator; onDone: () => void }) {
+export function StepPayments({ creator, onDone }: { creator: Creator; onDone?: () => void }) {
   const { payments } = creator;
   const start = useStartPayments(creator.id);
   const complete = useCompletePayments(creator.id);
@@ -47,7 +48,7 @@ export function StepPayments({ creator, onDone }: { creator: Creator; onDone: ()
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Button size="lg" onClick={onDone}>Continue</Button>
+          <StepContinue onDone={onDone} />
           <Button
             variant="ghost"
             size="lg"
@@ -141,13 +142,14 @@ export function StepPayments({ creator, onDone }: { creator: Creator; onDone: ()
         ))}
       </div>
 
-      <p className="text-sm text-muted">
-        You need this before you can take payments.{" "}
-        <button type="button" onClick={onDone} className="font-semibold text-brand hover:underline">
-          Skip for now
-        </button>{" "}
-        if you are starting with a free course.
-      </p>
+      <StepSkip onDone={onDone}>
+        {(skip) => (
+          <>
+            You need this before you can take payments. {skip} if you are starting with a free
+            course.
+          </>
+        )}
+      </StepSkip>
     </div>
   );
 }

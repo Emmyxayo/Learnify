@@ -1,10 +1,14 @@
 import type {
   Creator,
+  CreatorBranding,
   CreatorProfile,
   IdentityDocument,
   OnboardingStep,
   PayoutProvider,
 } from "../entities/creator";
+import type { PlanTier } from "../entities/plan";
+import type { Invoice } from "../entities/subscription";
+import type { OtpChallenge, PhoneChangeResult } from "../entities/session";
 import type { SubdomainAvailability } from "../value-objects/subdomain";
 
 export interface SubmitIdentityInput {
@@ -18,6 +22,33 @@ export interface StartPaymentsConnectionResult {
   /** Where to send the creator for the provider's OAuth consent screen. */
   handoffUrl: string;
   reference: string;
+}
+
+export interface UpdateAccountInput {
+  fullName: string;
+  /** Receipts and recovery. Never the login — that is the phone. */
+  email: string | null;
+}
+
+export interface UploadedLogo {
+  url: string;
+  fileName: string;
+}
+
+export interface ChangePlanInput {
+  tier: PlanTier;
+  /**
+   * Courses to retire so the account lands inside the new allowance.
+   *
+   * Travels WITH the tier change rather than as a call before it. Two
+   * calls can half-fail, and the half that fails leaves a creator on a
+   * plan that does not cover what they own — which is the one state
+   * this whole flow exists to prevent. Same reason reissue() takes the
+   * correction and the retirement together.
+   *
+   * Empty for an upgrade, and for a downgrade that already fits.
+   */
+  archiveCourseIds: string[];
 }
 
 export interface ConnectWhatsAppInput {
@@ -54,6 +85,35 @@ export interface CreatorRepository {
   checkSubdomain(value: string): Promise<SubdomainAvailability>;
   confirmSubdomain(id: string): Promise<Creator>;
   claimSubdomain(id: string, value: string): Promise<Creator>;
+
+  /* Branding — what the public sales page renders. */
+  updateBranding(id: string, branding: CreatorBranding): Promise<Creator>;
+  uploadLogo(file: File): Promise<UploadedLogo>;
+
+  /* Account. Name and email only: the phone is below, and is not a field. */
+  updateAccount(id: string, input: UpdateAccountInput): Promise<Creator>;
+
+  /**
+   * Changing the login number, which is a re-verification and not an
+   * edit.
+   *
+   * The phone IS the account, so a typo here locks the creator out of
+   * it permanently. requestPhoneChange proves they hold the new number
+   * before anything moves; confirmPhoneChange is what actually moves
+   * it. Deliberately NOT on AuthRepository: this mints no session and
+   * cannot create a creator, and putting it beside sign-in would make
+   * it look like a way in.
+   *
+   * Leaves whatsapp.phone alone. A creator's business number is often
+   * not their login, and silently moving both would take the number
+   * their students already message out from under them.
+   */
+  requestPhoneChange(id: string, newPhone: string): Promise<OtpChallenge>;
+  confirmPhoneChange(id: string, challengeId: string, code: string): Promise<PhoneChangeResult>;
+
+  /* Plan and billing. */
+  changePlan(id: string, input: ChangePlanInput): Promise<Creator>;
+  listInvoices(id: string): Promise<Invoice[]>;
 
   /* Wizard bookmark. Progress itself is derived from the data above. */
   setResumeStep(id: string, step: OnboardingStep): Promise<Creator>;

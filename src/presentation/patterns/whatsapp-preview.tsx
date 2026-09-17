@@ -76,6 +76,12 @@ export function WhatsAppPreview({
         "rounded-[0.75rem] rounded-tr-[0.25rem]",
         onPanel
           ? "bg-deep-raised border border-deep-border text-on-deep"
+          /* eslint-disable-next-line no-restricted-syntax --
+             WhatsApp's own bubble colours, not Learnify's. The whole
+             point of this component is that a creator sees what their
+             students will actually see, so these must not follow our
+             tokens or a creator's branding — they have to stay wrong
+             for us and right for WhatsApp. */
           : "bg-[#DCF8C6] text-[#111B21]",
         className
       )}
@@ -94,7 +100,10 @@ export function WhatsAppPreview({
                 key={a.name}
                 className={cn(
                   "flex items-center gap-1.5 rounded-control px-2 py-1 text-xs",
-                  onPanel ? "bg-on-deep/10 text-on-deep-muted" : "bg-black/5 text-[#4A5B66]"
+                  onPanel
+                    ? "bg-on-deep/10 text-on-deep-muted"
+                    // eslint-disable-next-line no-restricted-syntax -- WhatsApp's attachment colour.
+                    : "bg-black/5 text-[#4A5B66]"
                 )}
               >
                 <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
@@ -108,7 +117,10 @@ export function WhatsAppPreview({
       <div
         className={cn(
           "mt-0.5 flex items-center justify-end gap-1 text-[0.6875rem] tabular-nums",
-          onPanel ? "text-on-deep-muted" : "text-[#667781]"
+          onPanel
+            ? "text-on-deep-muted"
+            // eslint-disable-next-line no-restricted-syntax -- WhatsApp's timestamp colour.
+            : "text-[#667781]"
         )}
       >
         {timestamp && <span>{formatTime(timestamp)}</span>}

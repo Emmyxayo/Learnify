@@ -1,5 +1,8 @@
+import { z } from "zod";
 import type { CreatorRepository } from "@core/ports";
 import { CreatorSchema, type Creator } from "@core/entities/creator";
+import { OtpChallengeSchema, PhoneChangeResultSchema } from "@core/entities/session";
+import { InvoiceSchema } from "@core/entities/subscription";
 import { SubdomainAvailabilitySchema } from "@core/value-objects/subdomain";
 import { request } from "./http-client";
 
@@ -89,6 +92,61 @@ export const httpCreatorRepository: CreatorRepository = {
         body: JSON.stringify({ step }),
       })
     );
+  },
+
+  async updateBranding(id, branding) {
+    return parse(
+      await request(`/creators/${id}/branding`, {
+        method: "PUT",
+        body: JSON.stringify(branding),
+      })
+    );
+  },
+
+  /** multipart, so it sets no Content-Type and lets the browser add the boundary. */
+  async uploadLogo(file) {
+    const body = new FormData();
+    body.append("file", file);
+    const data = (await request(`/creators/logo`, {
+      method: "POST",
+      body,
+      headers: {},
+    })) as { url: string; fileName: string };
+    return { url: data.url, fileName: data.fileName };
+  },
+
+  async updateAccount(id, input) {
+    return parse(
+      await request(`/creators/${id}/account`, { method: "PUT", body: JSON.stringify(input) })
+    );
+  },
+
+  async requestPhoneChange(id, newPhone) {
+    return OtpChallengeSchema.parse(
+      await request(`/creators/${id}/phone/change`, {
+        method: "POST",
+        body: JSON.stringify({ phone: newPhone }),
+      })
+    );
+  },
+
+  async confirmPhoneChange(id, challengeId, code) {
+    return PhoneChangeResultSchema.parse(
+      await request(`/creators/${id}/phone/confirm`, {
+        method: "POST",
+        body: JSON.stringify({ challengeId, code }),
+      })
+    );
+  },
+
+  async changePlan(id, input) {
+    return parse(
+      await request(`/creators/${id}/plan`, { method: "PUT", body: JSON.stringify(input) })
+    );
+  },
+
+  async listInvoices(id) {
+    return z.array(InvoiceSchema).parse(await request(`/creators/${id}/invoices`));
   },
 
   async undeferStep(id, step) {

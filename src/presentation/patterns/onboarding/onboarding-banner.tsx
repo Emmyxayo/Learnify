@@ -5,10 +5,12 @@ import { StatusBanner, type BannerTone } from "@ui/ui/status-banner";
 import {
   BLOCKED_COPY,
   capability,
+  onboardingComplete,
   type BlockedBy,
   type CapabilityName,
   type Creator,
 } from "@core/entities/creator";
+import { settingsPathForStep } from "@core/entities/settings";
 
 /**
  * The studio's standing reminder that setup is not finished.
@@ -67,10 +69,18 @@ export function OnboardingBanner({
         // would only show the same spinner in a larger font.
         copy.step && blockedBy !== "identity-pending" ? (
           <Link
-            href={`/onboarding/${copy.step}`}
+            href={
+              /* A creator still in setup belongs in the wizard. One who
+                 finished it months ago and has since had a check
+                 rejected does not — send them to the section that owns
+                 the fix, not back through a flow they completed. */
+              onboardingComplete(creator)
+                ? settingsPathForStep(copy.step)
+                : `/onboarding/${copy.step}`
+            }
             className="text-sm font-semibold text-brand hover:underline"
           >
-            Finish this now
+            {onboardingComplete(creator) ? "Fix this now" : "Finish this now"}
           </Link>
         ) : undefined
       }

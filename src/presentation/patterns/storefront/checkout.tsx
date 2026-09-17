@@ -14,9 +14,9 @@ import {
 import { isFree } from "@core/value-objects/money";
 import { formatNgDisplay } from "@core/value-objects/phone";
 import { formatNaira } from "@shared/lib/format";
-import { courseUrl, enrolUrl } from "@shared/lib/site";
+import { coursePath, enrolPath } from "@shared/lib/site";
 import { startEnrolment, confirmEnrolment } from "@app-layer/storefront/actions";
-import { Button, buttonClasses } from "@ui/ui/button";
+import { Button } from "@ui/ui/button";
 import { Spinner } from "@ui/ui/spinner";
 import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
@@ -117,7 +117,7 @@ export function Checkout({
         details,
         /* Absolute, because the provider is off-site and has no
            notion of this app's routes. */
-        returnUrl: new URL(enrolUrl(creatorSlug, course.slug), window.location.origin).toString(),
+        returnUrl: new URL(enrolPath(creatorSlug, course.slug), window.location.origin).toString(),
       });
 
       if (result.kind === "enrolled") {
@@ -148,7 +148,7 @@ export function Checkout({
     <TenantTheme brandColor={storefront.brandColor} className="min-h-dvh bg-surface">
       <main className="mx-auto max-w-md px-5 py-6">
         <Link
-          href={courseUrl(creatorSlug, course.slug)}
+          href={coursePath(creatorSlug, course.slug)}
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
         >
           <ArrowLeft className="size-4" aria-hidden />
