@@ -15,6 +15,7 @@ import {
   useSignInWithPassword,
 } from "@app-layer/auth/queries";
 import type { VerificationChannel } from "@core/ports";
+import { allShownInline, fieldError } from "@shared/lib/field-errors";
 import { AuthCard } from "./auth-card";
 import { VerifyAccount } from "./verify-account";
 
@@ -37,6 +38,7 @@ function PasswordField({
   value,
   onChange,
   hint,
+  error,
   autoComplete,
 }: {
   id: string;
@@ -44,12 +46,13 @@ function PasswordField({
   value: string;
   onChange: (v: string) => void;
   hint?: string;
+  error?: string;
   autoComplete: string;
 }) {
   const [shown, setShown] = useState(false);
 
   return (
-    <Field id={id} label={label} hint={hint}>
+    <Field id={id} label={label} hint={hint} error={error}>
       {(props) => (
         <div className="relative">
           <Input
@@ -182,7 +185,11 @@ export function PasswordSignInForm() {
       )}
 
       <form onSubmit={submit} noValidate className="space-y-4">
-        <Field id="identifier" label="Email or phone number">
+        <Field
+          id="identifier"
+          label="Email or phone number"
+          error={fieldError(signIn.error, "identifier")}
+        >
           {(props) => (
             <Input
               {...props}
@@ -202,6 +209,7 @@ export function PasswordSignInForm() {
           label="Password"
           value={password}
           onChange={setPassword}
+          error={fieldError(signIn.error, "password")}
           autoComplete="current-password"
         />
 
@@ -245,6 +253,22 @@ export function PasswordSignUpForm() {
   /* Registering creates an account, not an academy. That is the next
      thing, and the only thing, this person can do. */
   const onward = () => router.push("/setup/academy");
+
+  /* The serializer rejects by field and names every one it objected
+     to at once, so each goes under the field it belongs to. */
+  const emailError = fieldError(register.error, "email");
+  const phoneError = fieldError(register.error, "phone");
+  const passwordError = fieldError(register.error, "password");
+  const nameError =
+    fieldError(register.error, "first_name") ??
+    fieldError(register.error, "last_name");
+
+  const INLINE = ["email", "phone", "password", "first_name", "last_name"];
+
+  /* An account on this email is not a validation failure to argue
+     with — it is a person on the wrong screen. Say so, and point at
+     the door they wanted. */
+  const alreadyRegistered = /already exists/i.test(emailError ?? "");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -314,17 +338,36 @@ export function PasswordSignUpForm() {
       title="Create your account"
       subtitle="Your phone number is how students reach your courses. The email and password are how you get back in."
     >
-      {register.isError && (
-        <StatusBanner tone="danger" title="Could not create your account" className="mb-4">
-          {message(
-            register.error,
-            "Something was rejected. Check the details and try again."
-          )}
+      {alreadyRegistered ? (
+        <StatusBanner tone="info" title="You already have an account" className="mb-4">
+          <span className="block">
+            {email.trim()} is already registered. Sign in with it instead —
+            and if you never entered the confirmation code, signing in is
+            where you finish that.
+          </span>
+          <Link
+            href="/sign-in/password"
+            className="mt-2 inline-block font-semibold text-brand hover:underline"
+          >
+            Go to sign in
+          </Link>
         </StatusBanner>
+      ) : (
+        /* Everything the server named is already under its own field.
+           Repeating it up here would say the same thing twice. */
+        register.isError &&
+        !allShownInline(register.error, INLINE) && (
+          <StatusBanner tone="danger" title="Could not create your account" className="mb-4">
+            {message(
+              register.error,
+              "Something was rejected. Check the details and try again."
+            )}
+          </StatusBanner>
+        )
       )}
 
       <form onSubmit={submit} noValidate className="space-y-4">
-        <Field id="full-name" label="Your name">
+        <Field id="full-name" label="Your name" error={nameError}>
           {(props) => (
             <Input
               {...props}
@@ -341,6 +384,7 @@ export function PasswordSignUpForm() {
           id="phone"
           label="Phone number"
           hint="The number your account is identified by."
+          error={phoneError}
         >
           {(props) => (
             <PhoneInput
@@ -353,7 +397,7 @@ export function PasswordSignUpForm() {
           )}
         </Field>
 
-        <Field id="email" label="Email">
+        <Field id="email" label="Email" error={emailError}>
           {(props) => (
             <Input
               {...props}
@@ -371,6 +415,7 @@ export function PasswordSignUpForm() {
         <PasswordField
           id="new-password"
           label="Password"
+          error={passwordError}
           value={password}
           onChange={setPassword}
           hint="Eight characters or more."

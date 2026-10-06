@@ -112,6 +112,12 @@ export class ApiError extends Error {
   }
 }
 
+/** first_name -> "First name". The wire's spelling is not a person's. */
+function labelFor(field: string): string {
+  const words = field.replace(/_/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Pulls {field: ["msg"]} out of whatever object holds it. */
 function collectFieldErrors(record: Record<string, unknown>) {
   const fieldErrors: Record<string, string[]> = {};
@@ -154,14 +160,34 @@ function normaliseError(status: number, body: unknown): ApiError {
         ? collectFieldErrors(e.details as Record<string, unknown>)
         : {};
 
-    /* The envelope's own message first — it is written for a person.
-       A field error only stands in when there is nothing better, and
-       it is prefixed so "This field is required" is not left floating
-       with no indication of which field. */
-    const firstField = Object.entries(details)[0];
+    /* The field errors first, because the envelope's message is a
+       category and theirs is the reason. A bad sign-up answers
+
+         message: "Validation failed."
+         details: {email: ["An account with this email already
+                            exists."]}
+
+       and showing the first of those is how somebody learns to go and
+       sign in instead. The envelope message stands in only when there
+       are no details to be more specific than it.
+
+       Joined rather than first-only: the serializer reports every
+       field it objected to in one response, and fixing them one
+       round-trip at a time is the worst way to find that out. */
+    const spelled = Object.entries(details)
+      .map(([field, messages]) =>
+        // One rejection speaks for itself. Several need saying which
+        // is which, or "This field is required." twice over is the
+        // whole message.
+        Object.keys(details).length > 1
+          ? `${labelFor(field)}: ${messages[0]}`
+          : messages[0]
+      )
+      .filter(Boolean);
+
     const summary =
+      spelled.join(" ") ||
       (typeof e.message === "string" && e.message) ||
-      (firstField ? `${firstField[0]}: ${firstField[1][0]}` : "") ||
       `Request failed (${status})`;
 
     return new ApiError(
