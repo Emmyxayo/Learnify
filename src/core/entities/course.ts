@@ -80,6 +80,27 @@ export const ObjectiveSchema = z.object({
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 
+/* ============================================================
+   Objectives as one string, and back
+
+   A module's objectives are a list here and a single block of text
+   wherever they are stored. These two are the conversion, and they
+   belong together: splitting on one character and joining on another
+   is how a list quietly becomes one long line.
+   ============================================================ */
+
+export const splitObjectives = (summary: string): string[] =>
+  summary
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+export const joinObjectives = (objectives: { text: string }[]): string =>
+  objectives
+    .map((o) => o.text.trim())
+    .filter(Boolean)
+    .join("\n");
+
 export const AttachmentSchema = z.object({
   id: z.string(),
   kind: z.enum(["pdf", "audio", "video", "image"]),

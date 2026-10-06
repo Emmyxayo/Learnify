@@ -52,6 +52,55 @@ export interface CourseRepository {
    */
   uploadSourceFile(file: File, onProgress?: UploadProgress): Promise<SourceFile>;
 
+  /* --- The course tree ---------------------------------------
+     Modules and lessons are their own records with their own
+     lifecycles, so they get their own operations rather than riding
+     along inside update(). Sending the whole tree on every keystroke
+     and letting the other side work out what changed is how a
+     dropped field becomes a deleted lesson.
+
+     Each returns the whole course so the cache has one source of
+     truth after a write, rather than the caller stitching a module
+     back into a tree it half-remembers.
+     ----------------------------------------------------------- */
+
+  addModule(courseId: string, title: string): Promise<Course>;
+  updateModule(
+    courseId: string,
+    moduleId: string,
+    patch: { title?: string; summary?: string }
+  ): Promise<Course>;
+  removeModule(courseId: string, moduleId: string): Promise<Course>;
+
+  addLesson(courseId: string, moduleId: string, title: string): Promise<Course>;
+  updateLesson(
+    courseId: string,
+    lessonId: string,
+    patch: { title?: string; body?: string; estimatedMinutes?: number; isPreview?: boolean }
+  ): Promise<Course>;
+  removeLesson(courseId: string, lessonId: string): Promise<Course>;
+
+  /** Whole tree at once: the order of modules and of lessons in each. */
+  reorder(
+    courseId: string,
+    order: { moduleId: string; lessonIds: string[] }[]
+  ): Promise<Course>;
+
+  attachAsset(courseId: string, lessonId: string, file: File): Promise<Course>;
+
+  /**
+   * What stands between this course and being published, in the
+   * backend's own words.
+   *
+   * The authority, not a second opinion computed here. A frontend
+   * that decides for itself what is publishable will eventually
+   * disagree with the endpoint that actually refuses.
+   */
+  publishBlockers(courseId: string): Promise<string[]>;
+
+  /** Takes a published course back to draft. */
+  unpublish(courseId: string): Promise<Course>;
+
   /** Kicks off the AI Course Builder. Returns immediately with status "generating". */
   generateFromUpload(courseId: string, fileIds: string[]): Promise<Course>;
 

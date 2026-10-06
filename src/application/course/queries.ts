@@ -173,3 +173,31 @@ export function useRetryGeneration(id: string) {
     },
   });
 }
+
+/**
+ * What the backend says stands between this course and publishing.
+ *
+ * The authority. The client-side preflight is still worth having —
+ * it knows which section each item lives in and can link there,
+ * which a list of strings cannot — but when the two disagree the
+ * server is the one that will actually refuse, so it wins.
+ */
+export function usePublishBlockers(courseId: string) {
+  return useQuery({
+    queryKey: [...courseKeys.detail(courseId), "publish-check"],
+    queryFn: () => repositories.courses.publishBlockers(courseId),
+    enabled: Boolean(courseId),
+    staleTime: 5_000,
+  });
+}
+
+export function useUnpublishCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => repositories.courses.unpublish(id),
+    onSuccess: (course) => {
+      qc.setQueryData(courseKeys.detail(course.id), course);
+      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+    },
+  });
+}

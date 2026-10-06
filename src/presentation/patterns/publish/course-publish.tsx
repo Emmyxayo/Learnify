@@ -16,6 +16,7 @@ import type { Money } from "@core/value-objects/money";
 import { ScheduleSection } from "./schedule-section";
 import { PricingSection } from "./pricing-section";
 import { PreflightList } from "./preflight-list";
+import { usePublishBlockers } from "@app-layer/course/queries";
 import { PublishedSuccess } from "./published-success";
 import { publicCourseUrl } from "@shared/lib/site";
 
@@ -27,6 +28,12 @@ export function CoursePublish({ courseId }: { courseId: string }) {
   const { data: course, isPending, isError, refetch } = useCourse(courseId);
   const update = useUpdateCourse(courseId);
   const publish = usePublishCourse();
+
+  /* The server's own verdict on whether this can go live. Declared up
+     here with the other hooks because it has to run on every render —
+     the early returns below are why it cannot sit beside the
+     checklist it belongs with. */
+  const serverBlockers = usePublishBlockers(courseId);
 
   /* Price is typed, so it is held locally and committed behind a
      debounce. Schedule is picked, so it commits on the click. */
@@ -104,7 +111,13 @@ export function CoursePublish({ courseId }: { courseId: string }) {
   /* Preflight reads the saved course, not the draft — the checklist
      should reflect what would actually be published. */
   const items = preflight(course, creator);
-  const ready = canPublish(items);
+
+  /* The checklist guides; the server decides. A blocker it reports
+     that the checklist does not still stops the publish — silently
+     enabling a button the backend will reject is a worse moment than
+     showing one more line. */
+  const blocked = serverBlockers.data ?? [];
+  const ready = canPublish(items) && blocked.length === 0;
   const lessons = lessonCount(course);
 
   return (
@@ -134,6 +147,24 @@ export function CoursePublish({ courseId }: { courseId: string }) {
       <Card className="p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-ink">Before it goes live</h2>
         <PreflightList items={items} courseId={course.id} onJumpToSection={jumpTo} />
+
+        {blocked.length > 0 && (
+          <StatusBanner
+            tone="warning"
+            className="mt-3"
+            title={
+              blocked.length === 1
+                ? "One more thing before this can go live"
+                : `${blocked.length} more things before this can go live`
+            }
+          >
+            <ul className="space-y-1">
+              {blocked.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </StatusBanner>
+        )}
 
         {publish.isError && (
           <StatusBanner tone="danger" className="mt-3" title="Could not publish">

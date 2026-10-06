@@ -2,6 +2,7 @@ import type { Creator } from "@core/entities/creator";
 import type { Academy, Onboarding } from "@core/entities/academy";
 import type { Release, Progress } from "@core/entities/release";
 import type { Course, Module, Lesson } from "@core/entities/course";
+import { splitObjectives } from "@core/entities/course";
 import type { Enrolment, Student } from "@core/entities/student";
 import { naira } from "@core/value-objects/money";
 import type { DeliverySchedule } from "@core/value-objects/schedule";
@@ -222,17 +223,26 @@ function toModule(w: WireModule): Module {
     id: w.id,
     courseId: w.course,
     title: w.title,
-    // The backend has a free-text summary where we have structured
-    // objectives. One objective carrying the summary keeps the shape
-    // without inventing a list that was never written.
-    objectives: w.summary
-      ? [{ id: `${w.id}-summary`, text: w.summary, aiGenerated: false }]
-      : [],
+    // The backend keeps one free-text summary where we keep a list of
+    // objectives. Round-tripped a line at a time: the list survives
+    // editing, reordering and deletion, and what the backend stores
+    // still reads as a paragraph to anything that only knows summary.
+    objectives: splitObjectives(w.summary).map((text, i) => ({
+      id: `${w.id}-obj-${i}`,
+      text,
+      aiGenerated: false,
+    })),
     order: w.position,
     lessons: w.lessons.map(toLesson),
     aiFields: [],
   };
 }
+
+export const joinObjectives = (objectives: { text: string }[]): string =>
+  objectives
+    .map((o) => o.text.trim())
+    .filter(Boolean)
+    .join("\n");
 
 /** `delivery_time` arrives as HH:MM:SS; the schedule wants HH:MM. */
 const trimSeconds = (t: string) => t.slice(0, 5);

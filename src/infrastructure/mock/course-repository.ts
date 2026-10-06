@@ -290,6 +290,184 @@ export const mockCourseRepository: CourseRepository = {
     return this.update(id, { status: "published", publishedAt: new Date().toISOString() });
   },
 
+  async unpublish(id) {
+    return this.update(id, { status: "draft", publishedAt: null });
+  },
+
+  /**
+   * The same blockers the backend checks, so the publish screen looks
+   * the same on both data sources. Phrased as the creator's next
+   * action rather than as a validation failure.
+   */
+  async publishBlockers(courseId) {
+    const course = requireCourse(courseId);
+    const blockers: string[] = [];
+
+    if (!course.title.trim()) blockers.push("Give the course a title.");
+    if (course.modules.length === 0) {
+      blockers.push("Add at least one module.");
+    } else if (course.modules.every((m) => m.lessons.length === 0)) {
+      blockers.push("Add at least one lesson.");
+    }
+    if (course.modules.some((m) => m.lessons.some((l) => !l.body.trim()))) {
+      blockers.push("Every lesson needs something in it.");
+    }
+
+    return simulate(blockers);
+  },
+
+  /* --- Tree ---------------------------------------------------- */
+
+  async addModule(courseId, title) {
+    const course = requireCourse(courseId);
+    const mod: Course["modules"][number] = {
+      id: `m_${Date.now()}`,
+      courseId,
+      title,
+      objectives: [],
+      order: course.modules.length,
+      lessons: [],
+      aiFields: [],
+    };
+    return this.update(courseId, { modules: [...course.modules, mod] });
+  },
+
+  async updateModule(courseId, moduleId, patch) {
+    const course = requireCourse(courseId);
+    return this.update(courseId, {
+      modules: course.modules.map((m) =>
+        m.id === moduleId
+          ? {
+              ...m,
+              title: patch.title ?? m.title,
+              objectives:
+                patch.summary === undefined
+                  ? m.objectives
+                  : [{ id: `${m.id}-summary`, text: patch.summary, aiGenerated: false }],
+            }
+          : m
+      ),
+    });
+  },
+
+  async removeModule(courseId, moduleId) {
+    const course = requireCourse(courseId);
+    return this.update(courseId, {
+      modules: course.modules
+        .filter((m) => m.id !== moduleId)
+        .map((m, i) => ({ ...m, order: i })),
+    });
+  },
+
+  async addLesson(courseId, moduleId, title) {
+    const course = requireCourse(courseId);
+    return this.update(courseId, {
+      modules: course.modules.map((m) =>
+        m.id === moduleId
+          ? {
+              ...m,
+              lessons: [
+                ...m.lessons,
+                {
+                  id: `l_${Date.now()}`,
+                  moduleId,
+                  title,
+                  body: "",
+                  order: m.lessons.length,
+                  attachments: [],
+                  hasQuiz: false,
+                  aiFields: [],
+                },
+              ],
+            }
+          : m
+      ),
+    });
+  },
+
+  async updateLesson(courseId, lessonId, patch) {
+    const course = requireCourse(courseId);
+    return this.update(courseId, {
+      modules: course.modules.map((m) => ({
+        ...m,
+        lessons: m.lessons.map((l) =>
+          l.id === lessonId
+            ? { ...l, title: patch.title ?? l.title, body: patch.body ?? l.body }
+            : l
+        ),
+      })),
+    });
+  },
+
+  async removeLesson(courseId, lessonId) {
+    const course = requireCourse(courseId);
+    return this.update(courseId, {
+      modules: course.modules.map((m) => ({
+        ...m,
+        lessons: m.lessons
+          .filter((l) => l.id !== lessonId)
+          .map((l, i) => ({ ...l, order: i })),
+      })),
+    });
+  },
+
+  async reorder(courseId, order) {
+    const course = requireCourse(courseId);
+    const byId = new Map(course.modules.map((m) => [m.id, m]));
+
+    const modules = order.flatMap(({ moduleId, lessonIds }, mi) => {
+      const mod = byId.get(moduleId);
+      if (!mod) return [];
+      const lessons = new Map(mod.lessons.map((l) => [l.id, l]));
+      return [
+        {
+          ...mod,
+          order: mi,
+          lessons: lessonIds.flatMap((id, li) => {
+            const lesson = lessons.get(id);
+            return lesson ? [{ ...lesson, order: li }] : [];
+          }),
+        },
+      ];
+    });
+
+    return this.update(courseId, { modules });
+  },
+
+  async attachAsset(courseId, lessonId, file) {
+    const course = requireCourse(courseId);
+    const kind = file.type.startsWith("image/")
+      ? ("image" as const)
+      : file.type.startsWith("audio/")
+        ? ("audio" as const)
+        : file.type.startsWith("video/")
+          ? ("video" as const)
+          : ("pdf" as const);
+
+    return this.update(courseId, {
+      modules: course.modules.map((m) => ({
+        ...m,
+        lessons: m.lessons.map((l) =>
+          l.id === lessonId
+            ? {
+                ...l,
+                attachments: [
+                  ...l.attachments,
+                  {
+                    id: `a_${Date.now()}`,
+                    kind,
+                    name: file.name,
+                    url: URL.createObjectURL(file),
+                    sizeBytes: file.size,
+                  },
+                ],
+              }
+            : l
+        ),
+      })),
+    });
+  },
+
   async uploadSourceFile(file, onProgress) {
     const kind = detectSourceKind(file.name, file.type);
     if (kind === null) {
