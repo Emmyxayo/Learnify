@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "schema:check": "node scripts/schema-check.mjs",
-    "schema:pull": "curl -fsSL \"https://api.learnifyng.tech/api/schema/?format=json\" -o openapi.json"
+    "schema:pull": "curl -fsSL \"https://api.learnifyng.tech/api/schema/?format=json\" -o openapi.json",
+    "api:check": "node scripts/api-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.0",

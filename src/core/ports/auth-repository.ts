@@ -1,11 +1,26 @@
 import type { Creator } from "../entities/creator";
 import type {
+  AuthSuccess,
   OtpChallenge,
   OtpPurpose,
   Session,
   VerifyOtpResult,
   GoogleAuthResult,
 } from "../entities/session";
+
+export interface PasswordSignInInput {
+  /** Email address or phone number. */
+  identifier: string;
+  password: string;
+}
+
+export interface PasswordRegisterInput {
+  fullName: string;
+  /** E.164. Still the identity, even when a password exists. */
+  phone: string;
+  email: string;
+  password: string;
+}
 
 export interface RequestOtpInput {
   /** E.164. The account. */
@@ -52,6 +67,24 @@ export interface AuthRepository {
 
   /** Resolves an already-linked Google account. Never creates a creator. */
   signInWithGoogle(): Promise<GoogleAuthResult>;
+
+  /* --- Password --------------------------------------------
+     A way in that does not depend on a code arriving.
+
+     The product is phone-first and a one-time code is the front
+     door, but that door only opens if something is actually sending
+     the codes. Where it is not, this is the difference between an
+     account someone can use and one they cannot reach — and
+     registration needs it regardless, because creating an account
+     without a password is not something every backend offers.
+
+     Both throw on failure rather than returning a result union.
+     Unlike a mistyped six-digit code, a rejected password is not a
+     normal step in a working flow.
+     --------------------------------------------------------- */
+
+  signInWithPassword(input: PasswordSignInInput): Promise<AuthSuccess>;
+  registerWithPassword(input: PasswordRegisterInput): Promise<AuthSuccess>;
 
   /** The live session, however the implementation stores it. Null when signed out. */
   getSession(): Promise<Session | null>;

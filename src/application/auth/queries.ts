@@ -2,7 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { repositories } from "@infra/container";
-import type { RequestOtpInput } from "@core/ports";
+import type {
+  RequestOtpInput,
+  PasswordSignInInput,
+  PasswordRegisterInput,
+} from "@core/ports";
 import type { AuthSuccess } from "@core/entities/session";
 import { authKeys, creatorKeys } from "../creator/query-keys";
 
@@ -56,6 +60,30 @@ export function useVerifyOtp(challengeId: string | null) {
           : prev
       );
     },
+  });
+}
+
+/* --- Password ------------------------------------------------
+   Both seed the session exactly as a verified code does, so
+   everything downstream — the redirect, the creator query, the
+   academy header — behaves identically whichever door was used.
+   ------------------------------------------------------------ */
+
+export function useSignInWithPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PasswordSignInInput) =>
+      repositories.auth.signInWithPassword(input),
+    onSuccess: (result) => seedSession(qc, result),
+  });
+}
+
+export function useRegisterWithPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PasswordRegisterInput) =>
+      repositories.auth.registerWithPassword(input),
+    onSuccess: (result) => seedSession(qc, result),
   });
 }
 

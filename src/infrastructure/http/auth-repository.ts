@@ -364,6 +364,61 @@ export const httpAuthRepository: AuthRepository = {
     return { ok: false, failure: "no-linked-account", email: null };
   },
 
+  /* --- Password ----------------------------------------------
+     The way in when no code arrives.
+
+     Both of these mint a session exactly as the OTP path does, so
+     everything downstream — the academy lookup, the Creator build,
+     the stored tokens — is the same code.
+     ----------------------------------------------------------- */
+
+  async signInWithPassword({ identifier, password }) {
+    const auth = await requestParsed(WireAuthResponse, "/api/v1/auth/login/", {
+      method: "POST",
+      body: { identifier, password },
+      anonymous: true,
+      unscoped: true,
+    });
+
+    adoptTokens(auth.access, auth.refresh);
+    clearChallenge();
+
+    const creator = await buildCreator(auth);
+    return {
+      session: sessionFrom(auth.access, creator.id),
+      creator,
+      isNewCreator: auth.academies.length === 0,
+    };
+  },
+
+  async registerWithPassword({ fullName, phone, email, password }) {
+    const [firstName, ...rest] = fullName.trim().split(/\s+/);
+
+    const auth = await requestParsed(WireAuthResponse, "/api/v1/auth/register/", {
+      method: "POST",
+      body: {
+        email,
+        phone,
+        first_name: firstName ?? "",
+        last_name: rest.join(" ") || (firstName ?? ""),
+        password,
+      },
+      anonymous: true,
+      unscoped: true,
+    });
+
+    adoptTokens(auth.access, auth.refresh);
+
+    const creator = await buildCreator(auth);
+    return {
+      session: sessionFrom(auth.access, creator.id),
+      creator,
+      // Registering never creates an academy — that is the separate
+      // act that makes someone a creator — so this is always true.
+      isNewCreator: true,
+    };
+  },
+
   async getSession(): Promise<Session | null> {
     await rehydrate();
     const access = getRefresh();

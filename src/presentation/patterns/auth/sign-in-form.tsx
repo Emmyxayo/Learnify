@@ -9,6 +9,7 @@ import { PhoneInput } from "@ui/ui/phone-input";
 import { Spinner } from "@ui/ui/spinner";
 import { StatusBanner } from "@ui/ui/status-banner";
 import { useGoogleSignIn, useRequestOtp } from "@app-layer/auth/queries";
+import { FEATURES } from "@shared/lib/features";
 import { AuthCard, GoogleMark } from "./auth-card";
 
 export function SignInForm() {
@@ -61,7 +62,10 @@ export function SignInForm() {
       footer={
         <>
           No academy yet?{" "}
-          <Link href="/sign-up" className="font-semibold text-brand hover:underline">
+          <Link
+            href={FEATURES.passwordAuth ? "/sign-up/password" : "/sign-up"}
+            className="font-semibold text-brand hover:underline"
+          >
             Create one
           </Link>
         </>
@@ -120,6 +124,22 @@ export function SignInForm() {
             {requestOtp.isPending && <Spinner label="" />}
             {requestOtp.isPending ? "Sending code" : "Send my code"}
           </Button>
+
+          {/* Secondary on purpose. A code is still the front door —
+              this is here because a code only arrives if something is
+              sending it, and it should not look like an equal choice
+              on a build where codes work. */}
+          {FEATURES.passwordAuth && (
+            <p className="text-center text-sm text-muted">
+              Code not arriving?{" "}
+              <Link
+                href="/sign-in/password"
+                className="font-semibold text-brand hover:underline"
+              >
+                Use a password
+              </Link>
+            </p>
+          )}
         </form>
 
         <div className="flex items-center gap-3" aria-hidden>

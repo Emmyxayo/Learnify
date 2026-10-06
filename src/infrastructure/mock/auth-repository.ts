@@ -198,6 +198,41 @@ export const mockAuthRepository: AuthRepository = {
     return simulate<GoogleAuthResult>({ ok: true, session, creator, isNewCreator: false });
   },
 
+  /* --- Password ----------------------------------------------
+     Here only so both implementations satisfy one interface.
+
+     The mock delivers its codes perfectly, so nothing in a mock run
+     ever needs this door — which is also why the UI does not offer
+     it there. Any password is accepted against a known identifier:
+     checking one would mean storing one, and a fixture password is
+     not a security boundary, it is a prop.
+     ----------------------------------------------------------- */
+
+  async signInWithPassword({ identifier }) {
+    const phone = toE164(identifier);
+    const creator = phone ? creatorStore.findByPhone(phone) : null;
+    if (!creator) {
+      throw new Error("No account uses that number or email.");
+    }
+
+    const session = issueSession(creator.id);
+    writeSessionCookie(session);
+    return simulate({ session, creator, isNewCreator: false });
+  },
+
+  async registerWithPassword({ fullName, phone, email }) {
+    const e164 = toE164(phone);
+    if (!e164) throw new Error("Enter a valid Nigerian mobile number");
+    if (creatorStore.findByPhone(e164)) {
+      throw new Error("That number already has an account. Sign in instead.");
+    }
+
+    const creator = creatorStore.put(createCreator(e164, fullName, email));
+    const session = issueSession(creator.id);
+    writeSessionCookie(session);
+    return simulate({ session, creator, isNewCreator: true });
+  },
+
   async getSession() {
     return simulate(readSessionCookie(), { latency: 150 });
   },

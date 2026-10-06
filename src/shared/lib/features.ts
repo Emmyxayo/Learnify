@@ -64,6 +64,32 @@ export const FEATURES = {
 
   /** Browsing courses across academies. The API is per academy. */
   marketplace: flag(process.env.NEXT_PUBLIC_FEATURE_MARKETPLACE, false),
+
+  /**
+   * Signing in and registering with a password.
+   *
+   * The only flag that is ON against the API and OFF against the
+   * mock, which is the opposite of every other one here — and for the
+   * same underlying reason. A one-time code is the front door and
+   * stays the front door, but it only opens when something is
+   * actually sending the codes. The mock always sends them; a real
+   * backend needs a delivery provider wired up, and until one is
+   * there a password is the difference between an account someone can
+   * reach and one they cannot.
+   *
+   * Registration needs it regardless: /auth/register/ requires an
+   * email and a password, and there is no passwordless way to create
+   * an account.
+   *
+   * Set NEXT_PUBLIC_FEATURE_PASSWORD_AUTH=0 to hide it once codes are
+   * arriving reliably.
+   */
+  passwordAuth:
+    process.env.NEXT_PUBLIC_FEATURE_PASSWORD_AUTH === "1"
+      ? true
+      : process.env.NEXT_PUBLIC_FEATURE_PASSWORD_AUTH === "0"
+        ? false
+        : usingApi,
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

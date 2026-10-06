@@ -14,7 +14,12 @@ export type {
   SubmissionFilters,
   GradeSubmissionInput,
 } from "./submission-repository";
-export type { AuthRepository, RequestOtpInput } from "./auth-repository";
+export type {
+  AuthRepository,
+  RequestOtpInput,
+  PasswordSignInInput,
+  PasswordRegisterInput,
+} from "./auth-repository";
 export type {
   CreatorRepository,
   SubmitIdentityInput,
