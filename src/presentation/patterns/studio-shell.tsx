@@ -21,9 +21,9 @@ import { formatPhone } from "@shared/lib/format";
 import { useSession } from "@app-layer/auth/use-session";
 import { useSignOut } from "@app-layer/auth/queries";
 import { useCreator } from "@app-layer/creator/queries";
-import { PLAN_TIER_LABELS, type PlanTier } from "@core/entities/plan";
 import type { Creator } from "@core/entities/creator";
 import { OnboardingBanner } from "./onboarding/onboarding-banner";
+import { AcademySwitcher } from "./academy-switcher";
 
 /* ============================================================
    Navigation
@@ -183,12 +183,14 @@ function Topbar({
         {loading && !creator ? (
           <div className="h-4 w-40 max-w-[50%] flex-1 animate-pulse rounded-control bg-surface-sunken" />
         ) : (
-          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
-            {creator?.profile?.academyName ?? creator?.fullName ?? "Your academy"}
-          </p>
+          <AcademySwitcher
+            fallbackName={
+              creator?.profile?.academyName ??
+              creator?.fullName ??
+              "Your academy"
+            }
+          />
         )}
-
-        {creator && <PlanBadge tier={creator.plan} />}
         {creator && (
           <AccountMenu
             creator={creator}
@@ -202,16 +204,6 @@ function Topbar({
   );
 }
 
-function PlanBadge({ tier }: { tier: PlanTier }) {
-  return (
-    <Link
-      href="/settings"
-      className="shrink-0 rounded-pill border border-brand-border bg-brand-subtle px-2.5 py-1 text-xs font-semibold text-brand"
-    >
-      {PLAN_TIER_LABELS[tier]}
-    </Link>
-  );
-}
 
 /* ============================================================
    Account menu

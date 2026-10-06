@@ -64,6 +64,7 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
 
     const destination = creatorDestination(creator);
     if (destination.area === "auth") return "/sign-in";
+    if (destination.area === "academy") return "/setup/academy";
 
     /* A half-onboarded creator is welcome here. Only the two things
        that make the studio meaningless send them back: an unverified
@@ -81,6 +82,14 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
 
   const destination = creatorDestination(creator);
   if (destination.area === "auth") return "/sign-in";
+
+  /* Someone with no academy inside setup belongs on the create
+     screen, and is already there or on their way — not bounced
+     between the wizard and itself. */
+  if (destination.area === "academy") {
+    return pathname === "/setup/academy" ? null : "/setup/academy";
+  }
+
   if (destination.area !== "studio") return null;
 
   /* Only the bare resume route redirects. A settled creator following

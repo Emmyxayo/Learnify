@@ -25,3 +25,8 @@ export type {
   ChangePlanInput,
 } from "./creator-repository";
 export type { StorefrontRepository, StartEnrolmentInput } from "./storefront-repository";
+export type {
+  AcademyRepository,
+  CreateAcademyInput,
+  UpdateAcademyInput,
+} from "./academy-repository";

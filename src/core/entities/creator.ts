@@ -470,6 +470,16 @@ export function capabilities(c: Creator): Record<CapabilityName, Capability> {
 export type CreatorDestination =
   /** Not usable at all. Back to the front door. */
   | { area: "auth" }
+  /**
+   * Signed in with no academy at all.
+   *
+   * Its own destination rather than a setup step, because it is not
+   * one: registering creates an account, and creating an academy is
+   * the separate act that makes someone a creator. Until it happens
+   * there is no tenant for a course to belong to and nothing for the
+   * studio to be scoped to, so the wizard has nothing to show either.
+   */
+  | { area: "academy" }
   /** Must finish this step before the studio means anything. */
   | { area: "setup"; step: OnboardingStep }
   /** Free to use the product, blockers or not. */
@@ -477,6 +487,7 @@ export type CreatorDestination =
 
 export function creatorDestination(c: Creator): CreatorDestination {
   if (c.phoneVerifiedAt === null) return { area: "auth" };
+  if (c.subdomain.value === null) return { area: "academy" };
   if (c.profile === null) return { area: "setup", step: "profile" };
   return { area: "studio" };
 }
