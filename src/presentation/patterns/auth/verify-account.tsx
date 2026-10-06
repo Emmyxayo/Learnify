@@ -98,11 +98,16 @@ export function VerifyAccount({
         finish.
       </p>
 
+      {/* The backend answers a wrong code and an expired one with the
+          same `invalid_otp`, and its message says which. So the title
+          covers both and the message carries the detail — claiming a
+          mismatch would send someone hunting for a typo in a code that
+          was simply too old. */}
       {failed && (
-        <StatusBanner tone="danger" title="That code did not match">
+        <StatusBanner tone="danger" title="That code did not work">
           {verify.error instanceof Error && verify.error.message
-            ? verify.error.message
-            : "Check the message again and re-enter it."}
+            ? `${verify.error.message} Send another to get a fresh one.`
+            : "Check the message again, or send another code."}
         </StatusBanner>
       )}
 

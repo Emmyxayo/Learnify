@@ -116,7 +116,27 @@ export const WireMe = z.object({
 });
 export type WireMe = z.infer<typeof WireMe>;
 
-/** Login and register both return this: tokens plus the /me payload. */
+/**
+ * Tokens plus the /me payload.
+ *
+ * The OpenAPI document declares this as the 201 of /auth/register/. It
+ * is not what that endpoint returns. Live, registering answers
+ *
+ *   201 {"detail": "Check your email for a verification code.",
+ *        "email": "...", "next": "verify_email"}
+ *
+ * with no tokens, and /auth/login/ then refuses with 403
+ * `email_not_verified` until the code is entered. Parsing the
+ * documented shape produces six "Required" errors at once.
+ *
+ * So the register path safeParses this and falls through — see
+ * registerWithPassword. Do not make that a hard parse on the strength
+ * of the document; it is wrong here, and this is the note that says so.
+ *
+ * /auth/login/ and /auth/otp/login/ do return it, and
+ * /auth/otp/verify/ returns a bare user with no tokens — confirming an
+ * account unlocks it, it does not sign you in.
+ */
 export const WireAuthResponse = WireMe.extend({
   access: z.string(),
   refresh: z.string(),
