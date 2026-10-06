@@ -210,6 +210,26 @@ export const mockCourseRepository: CourseRepository = {
     return simulate(onePage(result));
   },
 
+  /* Resolves the academy the same way getBySlug does, retired
+     addresses included — a forwarded link to an old subdomain should
+     reach the shop window, not a dead end. */
+  async listByAcademySlug(creatorSlug) {
+    const slug = creatorSlug.trim().toLowerCase();
+    const creator = CREATOR_FIXTURES.find(
+      (c) =>
+        c.subdomain.value === slug || c.subdomain.previous.some((p) => p.value === slug)
+    );
+    if (!creator) return simulate(onePage([]));
+
+    return simulate(
+      onePage(
+        tickAll(courses)
+          .filter((c) => c.creatorId === creator.id && c.status === "published")
+          .map(withoutSeededProof)
+      )
+    );
+  },
+
   async listByCreator(creatorId) {
     return simulate(
       onePage(tickAll(courses).filter((c) => c.creatorId === creatorId))

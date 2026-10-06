@@ -31,6 +31,18 @@ export interface CourseRepository {
    */
   listPublished(filters?: CourseFilters): Promise<Page<Course>>;
   listByCreator(creatorId: string): Promise<Page<Course>>;
+
+  /**
+   * One academy's published courses, read by a stranger.
+   *
+   * This is the shop window — the address a creator gives out when
+   * they are selling themselves rather than one course. Distinct from
+   * listPublished, which is a marketplace across academies and does
+   * not exist, and from listByCreator, which is the studio's own list
+   * and includes drafts.
+   */
+  listByAcademySlug(creatorSlug: string): Promise<Page<Course>>;
+
   getById(id: string): Promise<Course | null>;
   getBySlug(creatorSlug: string, courseSlug: string): Promise<Course | null>;
   create(input: CreateCourseInput): Promise<Course>;

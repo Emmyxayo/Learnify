@@ -6,6 +6,7 @@ import { query, request, requestPage, requestParsed, ApiError } from "./http-cli
 import {
   WireCourse,
   WireCourseDetail,
+  WirePublicCourse,
   WirePublicCourseDetail,
   WirePublishBlockers,
   type WireCourseWriteRequest,
@@ -53,6 +54,31 @@ export const httpCourseRepository: CourseRepository = {
   async listPublished(_filters: CourseFilters = {}): Promise<Page<Course>> {
     void _filters;
     return onePage<Course>([]);
+  },
+
+  /**
+   * An academy's shop window.
+   *
+   * Anonymous and unscoped like the sales page. Note what this does
+   * NOT do: it never decides whether the academy exists. The backend
+   * answers this with 200 and an empty page for a slug nobody holds,
+   * so a page that asked only this would tell a visitor the academy
+   * has no courses yet rather than that there is no such academy.
+   * Resolving the academy first is what makes that distinction, and
+   * getAcademyStorefront does it in that order for that reason.
+   */
+  async listByAcademySlug(creatorSlug): Promise<Page<Course>> {
+    const page = await requestPage(
+      WirePublicCourse,
+      `/api/v1/public/academies/${creatorSlug}/courses/${query({
+        page_size: 100,
+      })}`,
+      { anonymous: true, unscoped: true }
+    );
+
+    // Only the detail payload carries modules, and a catalogue card
+    // does not show them.
+    return mapPage(page, (c) => toPublicCourse({ ...c, modules: [] }, creatorSlug));
   },
 
   async listByCreator(_creatorId): Promise<Page<Course>> {

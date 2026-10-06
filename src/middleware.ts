@@ -32,10 +32,13 @@ export function middleware(request: NextRequest) {
 
   const url = request.nextUrl.clone();
 
-  /* The academy root has no index route yet, so it goes to the
-     marketing page rather than a 404 on someone's own domain. */
+  /* Every path under an academy's host maps onto that academy,
+     its root included. The root used to fall through to Learnify's
+     own marketing page — our advert on somebody else's domain, where
+     a visitor who typed the address they were given learned nothing
+     about the person who gave it to them. */
   url.pathname =
-    url.pathname === "/" ? "/" : `/c/${label}${url.pathname}`;
+    url.pathname === "/" ? `/c/${label}` : `/c/${label}${url.pathname}`;
 
   return NextResponse.rewrite(url);
 }

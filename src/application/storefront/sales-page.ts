@@ -61,3 +61,51 @@ export async function getSalesPage(
 
   return { outcome: "ready", storefront: resolution.storefront, course };
 }
+
+/* ------------------------------------------------------------------ *
+ * The academy's shop window
+ * ------------------------------------------------------------------ */
+
+export type AcademyPageResult =
+  | { outcome: "ready"; storefront: Storefront; courses: Course[] }
+  | { outcome: "moved"; creatorSlug: string }
+  | { outcome: "not-found" };
+
+/**
+ * An academy and everything it has published.
+ *
+ * The order matters and is the whole point of this function. The
+ * backend answers /public/academies/{slug}/courses/ with 200 and an
+ * empty page for a slug nobody holds, so asking it first would tell a
+ * visitor the academy exists and has nothing — on a URL that is a
+ * typo. Resolving the academy is what separates "no such academy"
+ * from "no courses yet", and only one of those is a 404.
+ *
+ * The published filter is here for the same reason it is in
+ * getSalesPage: a list that forgets it puts a creator's unfinished
+ * drafts on a public page.
+ */
+export async function getAcademyPage(
+  creatorSlug: string
+): Promise<AcademyPageResult> {
+  const resolution = await repositories.storefront.resolve(creatorSlug);
+
+  if (resolution.outcome === "unknown") return { outcome: "not-found" };
+
+  if (resolution.outcome === "moved") {
+    return { outcome: "moved", creatorSlug: resolution.storefront.subdomain };
+  }
+
+  const page = await repositories.courses
+    .listByAcademySlug(creatorSlug)
+    .catch(() => null);
+
+  return {
+    outcome: "ready",
+    storefront: resolution.storefront,
+    /* A catalogue that fails to load is an empty shop window, not a
+       broken page — the academy's name and branding are already
+       here and worth showing. */
+    courses: (page?.items ?? []).filter((c) => c.status === "published"),
+  };
+}

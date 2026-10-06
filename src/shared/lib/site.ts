@@ -89,10 +89,10 @@ export function publicCourseUrl(creatorSlug: string, courseSlug: string): string
  * Where an academy's courses live, for showing a creator their
  * address during setup.
  *
- * In subdomain mode this is a host they can visit. In path mode it is
- * a prefix rather than a page — there is no academy index route yet —
- * so the copy around it says "your courses live here" rather than
- * offering it as a link.
+ * A real page in both modes now — /c/<academy> in path mode, the host
+ * itself in subdomain mode — so the copy around it can offer it as a
+ * link rather than describing it. It used to be a prefix with nothing
+ * behind it, which is why some callers still only print it.
  */
 export function academyBase(creatorSlug: string): string {
   return usesSubdomains
@@ -115,3 +115,13 @@ export const absoluteUrl = (path: string) => `${SITE_ORIGIN}${path}`;
 export const ADDRESS_AFFIX: { prefix: string | null; suffix: string | null } = usesSubdomains
   ? { prefix: null, suffix: `.${TENANT_DOMAIN}` }
   : { prefix: `${SITE_ORIGIN.replace(/^https?:\/\//, "")}/c/`, suffix: null };
+
+/** The academy's own public page. Path-relative; links use this. */
+export const academyPath = (creatorSlug: string) => `/c/${creatorSlug}`;
+
+/** Absolute, for sharing. The address a creator puts on a card. */
+export function academyUrl(creatorSlug: string): string {
+  return usesSubdomains
+    ? `https://${creatorSlug}.${TENANT_DOMAIN}/`
+    : `${SITE_ORIGIN}${academyPath(creatorSlug)}`;
+}
