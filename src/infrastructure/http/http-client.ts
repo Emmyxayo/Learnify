@@ -13,6 +13,31 @@ import { paginated } from "./wire";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
+/**
+ * A relative base means requests go through this app's own proxy at
+ * /api/backend rather than straight to the API.
+ */
+const PROXIED = BASE.startsWith("/");
+
+/**
+ * Django wants a trailing slash on every path; Next, with its default
+ * trailingSlash: false, does not want one on its own routes. A proxied
+ * request is both at once — a Next route on the way in, a Django route
+ * on the way out — and only one of them can win at the door.
+ *
+ * So the slash is dropped here and put back by the proxy. Letting Next
+ * decide what to do with it instead means depending on whether it
+ * redirects or refuses, which is framework behaviour that can change
+ * under us and is invisible when it does. Going direct, the path is
+ * left exactly as written.
+ */
+function resolve(path: string): string {
+  if (!PROXIED) return `${BASE}${path}`;
+
+  const [pathname, search] = path.split("?");
+  return `${BASE}${pathname!.replace(/\/+$/, "")}${search ? `?${search}` : ""}`;
+}
+
 /* ------------------------------------------------------------------ *
  * Ambient request context
  *
@@ -189,7 +214,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   void anonymous;
   void unscoped;
 
-  return fetch(`${BASE}${path}`, {
+  return fetch(resolve(path), {
     ...init,
     headers: buildHeaders(options),
     body: form ?? (body === undefined ? undefined : JSON.stringify(body)),
