@@ -1,7 +1,14 @@
 # Learnify — Frontend
 
-WhatsApp-native learning commerce platform. Next.js 15, TypeScript, Tailwind v4,
-TanStack Query, clean architecture, mock data until the backend lands.
+A course platform for Nigeria. Next.js 15, TypeScript, Tailwind v4,
+TanStack Query, clean architecture.
+
+The backend is live at https://api.learnifyng.tech. It is a drip-delivery
+course platform with a public storefront and a web portal for students — not
+the WhatsApp delivery engine the frontend was originally designed around, and
+with no AI builder, quizzes, submissions, certificates, plans or payments.
+Those parts of the UI are gated in `src/shared/lib/features.ts` rather than
+deleted: all on against the mock, only what has endpoints on against the API.
 
 ## Running it
 

@@ -1,8 +1,13 @@
 # Learnify — Frontend
 
-WhatsApp-native learning commerce platform. Creators build courses,
-sell them, and deliver lessons over WhatsApp. Students never install an app.
-Nigeria-first: Naira, Paystack, WAT, phone-number identity.
+A course platform for Nigeria. Creators build a course, set a pace, and
+publish it; students enrol with a phone number and the lessons release
+themselves on schedule. Naira, WAT, phone-number identity, no app to install.
+
+The product was designed WhatsApp-native and the backend does not deliver over
+WhatsApp — it releases lessons to a web portal. Both the copy and the feature
+flags reflect what ships, not what was planned. See "What the backend does not
+have" below before writing anything that assumes otherwise.
 
 ## Stack
 Next.js 15 App Router, TypeScript strict, Tailwind v4, TanStack Query v5, Zod.
@@ -49,18 +54,49 @@ Sentence case. Active voice. Plain verbs. Buttons say what happens
 Empty states invite an action.
 
 ## Data
-Mocks in src/infrastructure/mock/, seeded faker, jittered latency, injectable
-errors via NEXT_PUBLIC_MOCK_ERROR_RATE. Always build loading, error and empty
-states — the mocks exist to force this.
+Two sources, chosen by NEXT_PUBLIC_DATA_SOURCE in container.ts.
+
+mock — seeded faker, jittered latency, injectable errors via
+NEXT_PUBLIC_MOCK_ERROR_RATE. Always build loading, error and empty states; the
+mocks exist to force this.
+
+api — https://api.learnifyng.tech. Wire shapes live in
+src/infrastructure/http/wire.ts, hand-written from the OpenAPI document and
+checked with `npm run schema:check`. Core entities are the domain; wire types
+are the transport. HTTP repos map between them in mappers.ts. Never let a
+generated or wire type into core/.
+
+Studio endpoints are scoped by an X-Academy header, set by the HTTP client.
+Public and /learn/* endpoints are unscoped; public ones are anonymous too.
+Every list is paginated — ports that map to one return Page<T>.
+
+## What the backend does not have
+Roughly half this frontend was built against a contract the API does not
+implement: the AI course builder, quizzes, submissions and grading,
+certificates, plans and commission, payments, and per-message WhatsApp
+delivery state.
+
+Those are gated in src/shared/lib/features.ts, not deleted — everything is on
+against the mock and only what has endpoints is on against the API. When an
+endpoint lands, set its NEXT_PUBLIC_FEATURE_* var to "1", then delete the flag
+once it is no longer optional.
+
+Do not build a screen that depends on one of these without gating it, and do
+not make a claim in copy that a gated feature would have to be on to keep.
 
 ## Session
-Session state is a cookie, never web storage, so it matches what the real
-backend will issue. No component may read the cookie directly — the real
-backend will make it httpOnly and JS will not be able to see it at all.
-Session access goes through the repository port like every other read:
-components call useSession() from src/application/auth/. The mock reads
-document.cookie, the http impl calls GET /me, and nothing above
-src/infrastructure/ changes.
+Components call useSession() from src/application/auth/ and never read a
+cookie. That rule held through the JWT migration, which is the point of it.
+
+Against the API the access token lives in memory and the refresh token in a
+cookie (src/infrastructure/http/token-store.ts). A 401 refreshes once and
+replays; a second 401 signs out. Only token-store.ts changes when the backend
+starts issuing the refresh token httpOnly.
+
+An academy is not the creator. A user can belong to several, each with a role,
+and every studio call is scoped to one by header. mappers.ts builds a Creator
+from Me + Academy as a compatibility seam — splitting Creator into User and
+Academy is the real fix and is still outstanding.
 
 ## Don't
 - Auth or session state in localStorage/sessionStorage. Cookies only, so it
