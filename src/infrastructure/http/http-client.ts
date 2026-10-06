@@ -93,7 +93,14 @@ export class ApiError extends Error {
     message: string,
     /** Field name to messages, for form-level display. */
     public fieldErrors: Record<string, string[]> = {},
-    public body?: unknown
+    public body?: unknown,
+    /**
+     * The backend's own machine-readable code, when it sends one —
+     * "email_not_verified", "validation_error". A screen that has to
+     * branch on WHICH failure happened reads this; matching on the
+     * message would break the moment someone rewords it.
+     */
+    public code?: string
   ) {
     super(message);
     this.name = "ApiError";
@@ -157,7 +164,13 @@ function normaliseError(status: number, body: unknown): ApiError {
       (firstField ? `${firstField[0]}: ${firstField[1][0]}` : "") ||
       `Request failed (${status})`;
 
-    return new ApiError(status, summary, details, body);
+    return new ApiError(
+      status,
+      summary,
+      details,
+      body,
+      typeof e.code === "string" ? e.code : undefined
+    );
   }
 
   if (typeof record.detail === "string") {

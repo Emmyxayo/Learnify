@@ -14,6 +14,42 @@ export interface PasswordSignInInput {
   password: string;
 }
 
+/**
+ * How an account gets confirmed before it can be used.
+ *
+ * The backend sends the code to whichever channel it chose, and says
+ * which in the registration response — guessing email because an
+ * email was supplied would be wrong the day it starts using the
+ * phone instead.
+ */
+export type VerificationChannel = "email" | "phone";
+
+/**
+ * How a password attempt ends.
+ *
+ * Not always with a session. The backend creates an account, sends a
+ * code and returns `next: "verify_email"` with no tokens; signing in
+ * before that is refused with `email_not_verified`. Both paths lead
+ * to the same place — enter the code — so both report it the same
+ * way.
+ *
+ * It is a union rather than a bare AuthSuccess because a flow that
+ * assumes a session it does not have fails one screen later, where the
+ * cause is no longer visible. And it is a returned value rather than a
+ * thrown error because needing to confirm a new account is a step in a
+ * working flow, not a fault: the screen that must react to it should
+ * not have to recognise a transport error code to do so.
+ */
+export type PasswordAuthResult =
+  | { kind: "signed-in"; auth: AuthSuccess }
+  | { kind: "verify-required"; channel: VerificationChannel; identifier: string };
+
+/** @see PasswordAuthResult */
+export type RegisterResult = PasswordAuthResult;
+
+/** @see PasswordAuthResult */
+export type SignInResult = PasswordAuthResult;
+
 export interface PasswordRegisterInput {
   fullName: string;
   /** E.164. Still the identity, even when a password exists. */
@@ -78,13 +114,29 @@ export interface AuthRepository {
      registration needs it regardless, because creating an account
      without a password is not something every backend offers.
 
-     Both throw on failure rather than returning a result union.
-     Unlike a mistyped six-digit code, a rejected password is not a
-     normal step in a working flow.
+     Both throw when the credentials are wrong — unlike a mistyped
+     six-digit code, a rejected password is not a normal step in a
+     working flow. An account that merely needs confirming is, so that
+     comes back as a result instead.
      --------------------------------------------------------- */
 
-  signInWithPassword(input: PasswordSignInInput): Promise<AuthSuccess>;
-  registerWithPassword(input: PasswordRegisterInput): Promise<AuthSuccess>;
+  signInWithPassword(input: PasswordSignInInput): Promise<SignInResult>;
+
+  /** Creates the account. Does not sign in — see PasswordAuthResult. */
+  registerWithPassword(input: PasswordRegisterInput): Promise<RegisterResult>;
+
+  /** Sends a fresh confirmation code to the channel named. */
+  requestAccountVerification(
+    identifier: string,
+    channel: VerificationChannel
+  ): Promise<void>;
+
+  /** Confirms the account. Mints no session; sign in afterwards. */
+  verifyAccount(
+    identifier: string,
+    channel: VerificationChannel,
+    code: string
+  ): Promise<void>;
 
   /** The live session, however the implementation stores it. Null when signed out. */
   getSession(): Promise<Session | null>;

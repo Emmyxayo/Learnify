@@ -217,7 +217,12 @@ export const mockAuthRepository: AuthRepository = {
 
     const session = issueSession(creator.id);
     writeSessionCookie(session);
-    return simulate({ session, creator, isNewCreator: false });
+    // Every fixture account is confirmed — there is no mailbox here to
+    // leave one waiting. The verify-required branch is the API's.
+    return simulate({
+      kind: "signed-in" as const,
+      auth: { session, creator, isNewCreator: false },
+    });
   },
 
   async registerWithPassword({ fullName, phone, email }) {
@@ -230,7 +235,24 @@ export const mockAuthRepository: AuthRepository = {
     const creator = creatorStore.put(createCreator(e164, fullName, email));
     const session = issueSession(creator.id);
     writeSessionCookie(session);
-    return simulate({ session, creator, isNewCreator: true });
+    // The mock has no mailbox to send a code to, so it signs the
+    // account in. The verify-required branch is the API's, and the
+    // UI handles both.
+    return simulate({
+      kind: "signed-in" as const,
+      auth: { session, creator, isNewCreator: true },
+    });
+  },
+
+  async requestAccountVerification() {
+    return simulate(undefined, { latency: 300 });
+  },
+
+  async verifyAccount(_identifier, _channel, code) {
+    if (code !== MOCK_OTP_CODE) {
+      throw new Error("That code did not match. Check it and try again.");
+    }
+    return simulate(undefined, { latency: 300 });
   },
 
   async getSession() {

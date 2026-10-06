@@ -6,6 +6,7 @@ import type {
   RequestOtpInput,
   PasswordSignInInput,
   PasswordRegisterInput,
+  VerificationChannel,
 } from "@core/ports";
 import type { AuthSuccess } from "@core/entities/session";
 import { authKeys, creatorKeys } from "../creator/query-keys";
@@ -64,9 +65,14 @@ export function useVerifyOtp(challengeId: string | null) {
 }
 
 /* --- Password ------------------------------------------------
-   Both seed the session exactly as a verified code does, so
-   everything downstream — the redirect, the creator query, the
-   academy header — behaves identically whichever door was used.
+   A session that comes back here is seeded exactly as a verified
+   code's is, so everything downstream — the redirect, the creator
+   query, the academy header — behaves identically whichever door
+   was used.
+
+   Neither of these always returns one. An account that has not been
+   confirmed yet comes back as verify-required instead, and only the
+   branch carrying a session seeds one.
    ------------------------------------------------------------ */
 
 export function useSignInWithPassword() {
@@ -74,7 +80,9 @@ export function useSignInWithPassword() {
   return useMutation({
     mutationFn: (input: PasswordSignInInput) =>
       repositories.auth.signInWithPassword(input),
-    onSuccess: (result) => seedSession(qc, result),
+    onSuccess: (result) => {
+      if (result.kind === "signed-in") seedSession(qc, result.auth);
+    },
   });
 }
 
@@ -83,7 +91,27 @@ export function useRegisterWithPassword() {
   return useMutation({
     mutationFn: (input: PasswordRegisterInput) =>
       repositories.auth.registerWithPassword(input),
-    onSuccess: (result) => seedSession(qc, result),
+    onSuccess: (result) => {
+      if (result.kind === "signed-in") seedSession(qc, result.auth);
+    },
+  });
+}
+
+export function useRequestAccountVerification() {
+  return useMutation({
+    mutationFn: (input: { identifier: string; channel: VerificationChannel }) =>
+      repositories.auth.requestAccountVerification(input.identifier, input.channel),
+  });
+}
+
+export function useVerifyAccount() {
+  return useMutation({
+    mutationFn: (input: {
+      identifier: string;
+      channel: VerificationChannel;
+      code: string;
+    }) =>
+      repositories.auth.verifyAccount(input.identifier, input.channel, input.code),
   });
 }
 

@@ -19,6 +19,10 @@ export type {
   RequestOtpInput,
   PasswordSignInInput,
   PasswordRegisterInput,
+  PasswordAuthResult,
+  RegisterResult,
+  SignInResult,
+  VerificationChannel,
 } from "./auth-repository";
 export type {
   CreatorRepository,

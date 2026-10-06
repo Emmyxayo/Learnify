@@ -372,51 +372,134 @@ export const httpAuthRepository: AuthRepository = {
      the stored tokens — is the same code.
      ----------------------------------------------------------- */
 
+  /**
+   * The password is right but the account was never confirmed is a
+   * 403 with code `email_not_verified`, and it is translated here
+   * rather than surfaced as an error.
+   *
+   * Someone who registered and never entered the code is in this
+   * state permanently, and sign-in is where they come back. Letting
+   * the refusal through as an error would make the screen match on a
+   * transport code to recover from it — a detail that has no business
+   * above this layer.
+   */
   async signInWithPassword({ identifier, password }) {
-    const auth = await requestParsed(WireAuthResponse, "/api/v1/auth/login/", {
-      method: "POST",
-      body: { identifier, password },
-      anonymous: true,
-      unscoped: true,
-    });
+    let auth;
+    try {
+      auth = await requestParsed(WireAuthResponse, "/api/v1/auth/login/", {
+        method: "POST",
+        body: { identifier, password },
+        anonymous: true,
+        unscoped: true,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "email_not_verified") {
+        return {
+          kind: "verify-required" as const,
+          channel: "email" as const,
+          identifier,
+        };
+      }
+      throw error;
+    }
 
     adoptTokens(auth.access, auth.refresh);
     clearChallenge();
 
     const creator = await buildCreator(auth);
     return {
-      session: sessionFrom(auth.access, creator.id),
-      creator,
-      isNewCreator: auth.academies.length === 0,
+      kind: "signed-in" as const,
+      auth: {
+        session: sessionFrom(auth.access, creator.id),
+        creator,
+        isNewCreator: auth.academies.length === 0,
+      },
     };
   },
 
+  /**
+   * Creates the account and stops there.
+   *
+   * The OpenAPI document says this returns tokens. It does not — it
+   * returns {detail, email, next: "verify_email"}, sends a code, and
+   * refuses to sign the account in until it is confirmed. Parsing the
+   * documented shape produced six "Required" errors at once, which is
+   * what a contract and an implementation disagreeing looks like.
+   *
+   * Tokens are still handled if they ever appear, so the day
+   * verification becomes optional nothing here has to change.
+   */
   async registerWithPassword({ fullName, phone, email, password }) {
     const [firstName, ...rest] = fullName.trim().split(/\s+/);
 
-    const auth = await requestParsed(WireAuthResponse, "/api/v1/auth/register/", {
+    const raw = await request<Record<string, unknown>>(
+      "/api/v1/auth/register/",
+      {
+        method: "POST",
+        body: {
+          email,
+          phone,
+          first_name: firstName ?? "",
+          last_name: rest.join(" ") || (firstName ?? ""),
+          password,
+        },
+        anonymous: true,
+        unscoped: true,
+      }
+    );
+
+    const withTokens = WireAuthResponse.safeParse(raw);
+    if (withTokens.success) {
+      const auth = withTokens.data;
+      adoptTokens(auth.access, auth.refresh);
+      const creator = await buildCreator(auth);
+      return {
+        kind: "signed-in" as const,
+        auth: {
+          session: sessionFrom(auth.access, creator.id),
+          creator,
+          // Registering never creates an academy — that is the
+          // separate act that makes someone a creator.
+          isNewCreator: true,
+        },
+      };
+    }
+
+    // `next` names the channel it sent to. Reading it rather than
+    // assuming email keeps this correct the day it starts using the
+    // phone instead.
+    const next = typeof raw.next === "string" ? raw.next : "verify_email";
+    return {
+      kind: "verify-required" as const,
+      channel: next.includes("phone") ? ("phone" as const) : ("email" as const),
+      identifier:
+        typeof raw.email === "string" && raw.email ? raw.email : email,
+    };
+  },
+
+  async requestAccountVerification(identifier, channel) {
+    await request("/api/v1/auth/otp/request/", {
       method: "POST",
       body: {
-        email,
-        phone,
-        first_name: firstName ?? "",
-        last_name: rest.join(" ") || (firstName ?? ""),
-        password,
+        identifier,
+        purpose: channel === "phone" ? "verify_phone" : "verify_email",
       },
       anonymous: true,
       unscoped: true,
     });
+  },
 
-    adoptTokens(auth.access, auth.refresh);
-
-    const creator = await buildCreator(auth);
-    return {
-      session: sessionFrom(auth.access, creator.id),
-      creator,
-      // Registering never creates an academy — that is the separate
-      // act that makes someone a creator — so this is always true.
-      isNewCreator: true,
-    };
+  async verifyAccount(identifier, channel, code) {
+    await request("/api/v1/auth/otp/verify/", {
+      method: "POST",
+      body: {
+        identifier,
+        purpose: channel === "phone" ? "verify_phone" : "verify_email",
+        code,
+      },
+      anonymous: true,
+      unscoped: true,
+    });
   },
 
   async getSession(): Promise<Session | null> {

@@ -14,7 +14,9 @@ import {
   useRegisterWithPassword,
   useSignInWithPassword,
 } from "@app-layer/auth/queries";
+import type { VerificationChannel } from "@core/ports";
 import { AuthCard } from "./auth-card";
+import { VerifyAccount } from "./verify-account";
 
 /**
  * The password door.
@@ -79,6 +81,13 @@ function PasswordField({
 const message = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
+/**
+ * The account exists but has not been confirmed. Both forms can end
+ * here, and both resume by signing in once it has been, so both hold
+ * the password rather than asking for it a second time.
+ */
+type Pending = { identifier: string; channel: VerificationChannel };
+
 /* ------------------------------------------------------------------ *
  * Sign in
  * ------------------------------------------------------------------ */
@@ -88,18 +97,74 @@ export function PasswordSignInForm() {
   const signIn = useSignInWithPassword();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const canSubmit =
     identifier.trim().length > 2 && password.length > 0 && !signIn.isPending;
 
+  /** Shared by the first attempt and the one after confirming. */
+  async function attempt(who: string) {
+    const result = await signIn.mutateAsync({ identifier: who, password });
+
+    if (result.kind === "verify-required") {
+      setPending({ identifier: result.identifier, channel: result.channel });
+      return;
+    }
+
+    setPending(null);
+    router.push(result.auth.isNewCreator ? "/setup/academy" : "/dashboard");
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    const result = await signIn.mutateAsync({
-      identifier: identifier.trim(),
-      password,
-    });
-    router.push(result.isNewCreator ? "/setup/academy" : "/dashboard");
+    // The banner below renders the failure; rethrowing here would only
+    // surface it a second time as an unhandled rejection.
+    try {
+      await attempt(identifier.trim());
+    } catch {
+      /* shown by signIn.isError */
+    }
+  }
+
+  /*
+   * The password is still in state, so confirming the account can go
+   * straight on to signing in. Asking for it again here would be
+   * asking the same question twice in one flow.
+   */
+  if (pending) {
+    return (
+      <AuthCard
+        title="Confirm your email"
+        subtitle="Your password is right. This account just has not been confirmed yet."
+      >
+        {signIn.isError && (
+          <StatusBanner tone="danger" title="Could not sign you in" className="mb-4">
+            {message(signIn.error, "Try signing in again.")}
+          </StatusBanner>
+        )}
+
+        <VerifyAccount
+          identifier={pending.identifier}
+          channel={pending.channel}
+          onVerified={() =>
+            attempt(pending.identifier).catch(() => {
+              /* shown by signIn.isError */
+            })
+          }
+        />
+
+        <p className="mt-5 text-center text-sm text-muted">
+          <button
+            type="button"
+            onClick={() => setPending(null)}
+            className="font-semibold text-brand hover:underline"
+          >
+            Use a different account
+          </button>
+        </p>
+      </AuthCard>
+    );
   }
 
   return (
@@ -162,11 +227,13 @@ export function PasswordSignInForm() {
 export function PasswordSignUpForm() {
   const router = useRouter();
   const register = useRegisterWithPassword();
+  const signIn = useSignInWithPassword();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const canSubmit =
     fullName.trim().length >= 2 &&
@@ -175,18 +242,71 @@ export function PasswordSignUpForm() {
     password.length >= 8 &&
     !register.isPending;
 
+  /* Registering creates an account, not an academy. That is the next
+     thing, and the only thing, this person can do. */
+  const onward = () => router.push("/setup/academy");
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    await register.mutateAsync({
-      fullName: fullName.trim(),
-      phone,
-      email: email.trim(),
-      password,
-    });
-    // Registering creates an account, not an academy. That is the
-    // next thing, and the only thing, this person can do.
-    router.push("/setup/academy");
+
+    try {
+      const result = await register.mutateAsync({
+        fullName: fullName.trim(),
+        phone,
+        email: email.trim(),
+        password,
+      });
+
+      if (result.kind === "verify-required") {
+        setPending({ identifier: result.identifier, channel: result.channel });
+        return;
+      }
+
+      onward();
+    } catch {
+      /* shown by register.isError */
+    }
+  }
+
+  /**
+   * Confirming mints no session, so this signs in afterwards with the
+   * password already in state — one flow, not two, and nobody is sent
+   * back to a sign-in screen seconds after choosing a password.
+   *
+   * If that sign-in fails the account still exists and is confirmed,
+   * so the sign-in screen is the honest place to land.
+   */
+  async function finish() {
+    if (!pending) return;
+    try {
+      const result = await signIn.mutateAsync({
+        identifier: pending.identifier,
+        password,
+      });
+      if (result.kind === "signed-in") {
+        onward();
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+    router.push("/sign-in/password");
+  }
+
+  if (pending) {
+    return (
+      <AuthCard
+        title="Confirm your email"
+        subtitle="Your account is created. Enter the code to finish setting it up."
+      >
+        <VerifyAccount
+          identifier={pending.identifier}
+          channel={pending.channel}
+          onVerified={finish}
+        />
+      </AuthCard>
+    );
   }
 
   return (
