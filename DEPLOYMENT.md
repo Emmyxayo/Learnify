@@ -5,6 +5,22 @@ Target: **https://learnifyng.tech** on Vercel, with the API staying at
 
 ---
 
+## 0. Two things that have to be true before the first deploy
+
+**The production branch must be `main`.** Vercel deploys the repo's
+default branch. All of the backend integration landed on
+`backend-contract` and was merged forward; if `main` ever falls behind
+again, Vercel ships whatever is on it, not the work.
+
+**Set the environment variables before deploying, not after.** Every
+`NEXT_PUBLIC_*` value is inlined into the bundle at *build* time, not
+read at runtime. Deploy first and `NEXT_PUBLIC_DATA_SOURCE` defaults
+to `mock` — the site comes up on the real domain serving invented
+courses and fake students, and it stays that way until a *rebuild*,
+not a restart.
+
+---
+
 ## 1. Environment variables
 
 Set these in Vercel under **Settings → Environment Variables**, for
@@ -69,21 +85,51 @@ npm run api:check
 
 ## 3. DNS
 
+### Do not move the nameservers
+
+DNS for this domain is at **Hostinger** (`aster.dns-parking.com`,
+`helios.dns-parking.com`), and as published today:
+
+| Record | Value | What it is |
+|---|---|---|
+| `learnifyng.tech` A | `2.57.91.91` | Hostinger parking — this is the one to change |
+| `api.learnifyng.tech` A | `69.62.111.152` | **the backend** |
+| `www` CNAME | `learnifyng.tech` | follows the apex |
+| MX, TXT | none | no email or verification to preserve |
+
+Pointing the nameservers at Vercel moves the whole zone, and every
+record not recreated there stops resolving — **including `api`, which
+is the backend.** The API would go down the moment the change
+propagated, and the frontend with it.
+
+There is no need for it. Vercel validates a specific domain over HTTP
+and issues the certificate without controlling the zone.
+
+### What to actually change
+
 In Vercel: **Settings → Domains → Add** `learnifyng.tech`, then add
 `www.learnifyng.tech` and set it to redirect to the apex.
 
-At your registrar, where `api` already points at the backend:
+Then at Hostinger, change exactly two records:
 
-| Type | Name | Value |
-|---|---|---|
-| `A` | `@` | `76.76.21.21` |
-| `CNAME` | `www` | `cname.vercel-dns.com` |
+| Type | Name | From | To |
+|---|---|---|---|
+| `A` | `@` | `2.57.91.91` | `76.76.21.21` |
+| `CNAME` | `www` | `learnifyng.tech` | `cname.vercel-dns.com` |
 
-Leave the existing `api` record alone — that is the backend and it
-must keep resolving where it does.
+**Leave the `api` A record exactly as it is.** Nothing about this
+deployment touches the backend's address.
 
-Vercel shows the exact values it wants on the Domains screen. If they
-differ from the above, use Vercel's.
+Vercel prints the values it wants on the Domains screen. If they
+differ from these, use Vercel's — they are authoritative and these
+were correct at the time of writing.
+
+### Later, if you want per-academy subdomains
+
+That is the one thing that *does* want the nameservers at Vercel, for
+automatic wildcard certificates. If you ever do it, recreate `api` →
+`69.62.111.152` at Vercel **first**, confirm it resolves, and only
+then change the nameservers. See §5.
 
 ---
 
@@ -120,8 +166,14 @@ Before setting it you need both:
 1. A wildcard DNS record — `CNAME *.learnifyng.tech → cname.vercel-dns.com`
 2. A wildcard TLS certificate, which Vercel issues automatically
    **only when the domain's nameservers are Vercel's.** If you keep
-   DNS at your registrar you have to add each academy's subdomain by
-   hand, which does not scale.
+   DNS at Hostinger you have to add each academy's subdomain by hand,
+   which does not scale.
+
+Point 2 is the one that costs something, because moving the
+nameservers moves the whole zone. Before changing them, recreate
+`api.learnifyng.tech → 69.62.111.152` in Vercel's DNS and confirm it
+resolves. Miss that and the backend disappears along with the parking
+page.
 
 Until both are in place, leave it unset. Links are permanent once
 somebody has pasted one into a group chat.
