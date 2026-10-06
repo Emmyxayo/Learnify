@@ -1,4 +1,5 @@
 import type { Enrolment } from "../entities/student";
+import type { Page } from "../value-objects/page";
 
 export interface StudentFilters {
   courseId?: string;
@@ -6,7 +7,11 @@ export interface StudentFilters {
 }
 
 export interface StudentRepository {
-  listEnrolments(creatorId: string, filters?: StudentFilters): Promise<Enrolment[]>;
+  /** Paginated: the roster is the one list that genuinely gets long. */
+  listEnrolments(
+    creatorId: string,
+    filters?: StudentFilters
+  ): Promise<Page<Enrolment>>;
   getEnrolment(id: string): Promise<Enrolment | null>;
 
   /**

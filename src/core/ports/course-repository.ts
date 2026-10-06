@@ -1,5 +1,6 @@
 import type { Course, CreateCourseInput, Category } from "../entities/course";
 import type { SourceFile } from "../value-objects/source-file";
+import type { Page } from "../value-objects/page";
 
 export interface CourseFilters {
   category?: Category;
@@ -22,8 +23,14 @@ export type UploadProgress = (fraction: number) => void;
  * Hand this file to whoever builds the backend. It is the spec.
  */
 export interface CourseRepository {
-  listPublished(filters?: CourseFilters): Promise<Course[]>;
-  listByCreator(creatorId: string): Promise<Course[]>;
+  /**
+   * Both lists are paginated because the backend paginates them, and
+   * the page carries `count` — which the courses list prints and the
+   * plan gate compares against PLAN_LIMITS. Unwrapping to an array
+   * here would mean guessing the total from the rows in hand.
+   */
+  listPublished(filters?: CourseFilters): Promise<Page<Course>>;
+  listByCreator(creatorId: string): Promise<Page<Course>>;
   getById(id: string): Promise<Course | null>;
   getBySlug(creatorSlug: string, courseSlug: string): Promise<Course | null>;
   create(input: CreateCourseInput): Promise<Course>;

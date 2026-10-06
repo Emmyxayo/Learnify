@@ -60,7 +60,7 @@ export function StepWhatsApp({ creator, onDone }: { creator: Creator; onDone?: (
      this never runs, which is the point — a wizard step should not open
      with a student query for an account that has none. */
   const enrolments = useEnrolments(whatsapp.status === "connected" ? creator.id : null);
-  const affected = activeDeliveryCount(enrolments.data ?? []);
+  const affected = activeDeliveryCount(enrolments.data?.items ?? []);
 
   if (whatsapp.status === "connected") {
     return (

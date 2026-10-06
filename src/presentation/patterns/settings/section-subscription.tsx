@@ -41,10 +41,10 @@ export function SectionSubscription({ creator }: { creator: Creator }) {
   const [pendingTier, setPendingTier] = useState<PlanTier | null>(null);
 
   const counted = useMemo(
-    () => (courses.data ?? []).filter(countsTowardPlanLimit),
+    () => (courses.data?.items ?? []).filter(countsTowardPlanLimit),
     [courses.data]
   );
-  const studentCount = activeDeliveryCount(enrolments.data ?? []);
+  const studentCount = activeDeliveryCount(enrolments.data?.items ?? []);
 
   const limits = PLAN_LIMITS[creator.plan];
   const ready = !courses.isPending && !enrolments.isPending;
@@ -57,7 +57,11 @@ export function SectionSubscription({ creator }: { creator: Creator }) {
     : null;
 
   const candidates = useMemo(
-    () => downgradeCandidates(courses.data ?? [], enrolments.data ?? []),
+    () =>
+      downgradeCandidates(
+        courses.data?.items ?? [],
+        enrolments.data?.items ?? []
+      ),
     [courses.data, enrolments.data]
   );
 

@@ -1,5 +1,6 @@
 import type { StudentRepository } from "@core/ports";
 import type { Enrolment } from "@core/entities/student";
+import { onePage } from "@core/value-objects/page";
 import { ENROLMENT_FIXTURES } from "./fixtures/students";
 import { COURSE_FIXTURES } from "./fixtures/courses";
 import { MockApiError, simulate } from "./latency";
@@ -18,7 +19,7 @@ export const mockStudentRepository: StudentRepository = {
     if (filters.courseId) result = result.filter((e) => e.courseId === filters.courseId);
     if (filters.status) result = result.filter((e) => e.status === filters.status);
 
-    return simulate(result);
+    return simulate(onePage(result));
   },
 
   async getEnrolment(id) {

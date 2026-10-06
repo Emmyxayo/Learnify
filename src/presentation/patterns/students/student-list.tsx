@@ -27,13 +27,13 @@ export function StudentList() {
   /* NO_ROWS rather than a fresh [] — a new array every render gives
      every useMemo below a changed dependency, so they recompute on
      each pass and memoising them achieves nothing. */
-  const rows = enrolments.data ?? NO_ROWS;
+  const rows = enrolments.data?.items ?? NO_ROWS;
 
   /* Course titles come from the courses the creator actually has, so
      the filter can never offer one with nobody in it. */
   const courseOptions = useMemo(() => {
     const present = new Set(rows.map((e) => e.courseId));
-    return (courses.data ?? [])
+    return (courses.data?.items ?? [])
       .filter((c) => present.has(c.id))
       .map((c) => ({ value: c.id, label: c.title }));
   }, [rows, courses.data]);
@@ -60,7 +60,7 @@ export function StudentList() {
         accessorKey: "courseId",
         cell: (ctx) => {
           const id = ctx.getValue<string>();
-          return courses.data?.find((c) => c.id === id)?.title ?? "—";
+          return courses.data?.items.find((c) => c.id === id)?.title ?? "—";
         },
         /* Filtered by id, displayed as a title. */
         filterFn: "equals",

@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "schema:check": "node scripts/schema-check.mjs",
+    "schema:pull": "curl -fsSL \"https://api.learnifyng.tech/api/schema/?format=json\" -o openapi.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.0",

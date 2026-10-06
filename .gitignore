@@ -8,3 +8,6 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# pulled by npm run schema:pull; schema:check reads the live URL
+openapi.json

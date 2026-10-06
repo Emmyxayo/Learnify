@@ -46,7 +46,9 @@ export function CourseList() {
         </StatusBanner>
       )}
 
-      {!loading && data && creator && <Loaded courses={data} creatorId={creator.id} tier={creator.plan} />}
+      {!loading && data && creator && (
+        <Loaded courses={data.items} creatorId={creator.id} tier={creator.plan} />
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { onePage } from "@core/value-objects/page";
 import type { CourseRepository, CourseFilters } from "@core/ports";
 import type { Course, CreateCourseInput, GenerationPhase } from "@core/entities/course";
 import { GENERATION_PHASES } from "@core/entities/course";
@@ -206,11 +207,13 @@ export const mockCourseRepository: CourseRepository = {
         (c) => c.title.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q)
       );
     }
-    return simulate(result);
+    return simulate(onePage(result));
   },
 
   async listByCreator(creatorId) {
-    return simulate(tickAll(courses).filter((c) => c.creatorId === creatorId));
+    return simulate(
+      onePage(tickAll(courses).filter((c) => c.creatorId === creatorId))
+    );
   },
 
   async getById(id) {
