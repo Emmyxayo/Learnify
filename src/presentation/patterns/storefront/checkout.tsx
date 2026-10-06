@@ -114,6 +114,8 @@ export function Checkout({
     try {
       const result = await startEnrolment({
         courseId: course.id,
+        creatorSlug,
+        courseSlug: course.slug,
         details,
         /* Absolute, because the provider is off-site and has no
            notion of this app's routes. */

@@ -8,6 +8,16 @@ import type { Enrolment } from "../entities/student";
 
 export interface StartEnrolmentInput {
   courseId: string;
+  /**
+   * The public address this enrolment came through.
+   *
+   * Carried alongside the id because the public API is addressed by
+   * slug, not by id — the student is on /c/<academy>/<course> and
+   * that pair is what identifies the course to an unauthenticated
+   * caller. The id stays for the implementations that key on it.
+   */
+  creatorSlug: string;
+  courseSlug: string;
   details: EnrolDetails;
   /**
    * Where the provider should send the student back to. Absolute,

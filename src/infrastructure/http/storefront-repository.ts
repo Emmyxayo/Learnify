@@ -1,75 +1,131 @@
-import { z } from "zod";
-import type { StorefrontRepository } from "@core/ports";
-import {
-  StorefrontSchema,
-  EnrolDetailsSchema,
-  type CheckoutOutcome,
-  type StartEnrolmentResult,
-  type StorefrontResolution,
+import type { StorefrontRepository, StartEnrolmentInput } from "@core/ports";
+import type {
+  CheckoutOutcome,
+  StartEnrolmentResult,
+  StorefrontResolution,
 } from "@core/entities/storefront";
-import { EnrolmentSchema } from "@core/entities/student";
-import { request } from "./http-client";
+import type { Enrolment } from "@core/entities/student";
+import { requestParsed } from "./http-client";
+import { WireEnrollment, WirePublicAcademy } from "./wire";
 
-/* The unions are the contract. Parsing them here is what keeps a
-   backend that quietly adds a sixth checkout status loud rather than
-   rendering an empty screen on a student's phone. */
-
-const ResolutionSchema = z.discriminatedUnion("outcome", [
-  z.object({ outcome: z.literal("current"), storefront: StorefrontSchema }),
-  z.object({ outcome: z.literal("moved"), storefront: StorefrontSchema, from: z.string() }),
-  z.object({ outcome: z.literal("unknown"), value: z.string() }),
-]);
-
-const StartResultSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("enrolled"), enrolment: EnrolmentSchema }),
-  z.object({ kind: z.literal("handoff"), reference: z.string(), handoffUrl: z.string() }),
-  z.object({ kind: z.literal("already-enrolled"), enrolment: EnrolmentSchema }),
-]);
-
-const OutcomeSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("paid"), enrolment: EnrolmentSchema }),
-  z.object({
-    status: z.literal("pending"),
-    reference: z.string(),
-    details: EnrolDetailsSchema,
-    since: z.string(),
-  }),
-  z.object({
-    status: z.literal("failed"),
-    reference: z.string(),
-    reason: z.string(),
-    canRetry: z.boolean(),
-  }),
-  z.object({
-    status: z.literal("abandoned"),
-    reference: z.string(),
-    details: EnrolDetailsSchema,
-  }),
-  z.object({ status: z.literal("unknown-reference"), reference: z.string() }),
-]);
+/**
+ * The public surface.
+ *
+ * Every call here is anonymous and unscoped — a student who tapped a
+ * link in a WhatsApp group has no session and no academy header, and
+ * sending either would be wrong rather than merely unnecessary.
+ */
 
 export const httpStorefrontRepository: StorefrontRepository = {
-  async resolve(creatorSlug) {
-    const data = await request(`/storefronts/${encodeURIComponent(creatorSlug)}`);
-    return ResolutionSchema.parse(data) as StorefrontResolution;
-  },
-
-  async findEnrolment(courseId, phoneE164) {
-    const qs = new URLSearchParams({ courseId, phone: phoneE164 });
+  async resolve(creatorSlug): Promise<StorefrontResolution> {
     try {
-      return EnrolmentSchema.parse(await request(`/enrolments/lookup?${qs}`));
+      const academy = await requestParsed(
+        WirePublicAcademy,
+        `/api/v1/public/academies/${creatorSlug}/`,
+        { anonymous: true, unscoped: true }
+      );
+
+      return {
+        outcome: "current",
+        storefront: {
+          creatorId: academy.slug,
+          academyName: academy.name,
+          bio: academy.tagline || academy.description,
+          subdomain: academy.slug,
+          brandColor: academy.brand_color || null,
+          logoUrl: academy.logo,
+          /**
+           * Shown as the number lessons come from. It is a contact
+           * detail on the academy and nothing sends through it yet,
+           * so it is reported only as a way to reach the creator —
+           * the page copy is what has to stay honest about that.
+           */
+          whatsappNumber: academy.whatsapp_number || null,
+          /**
+           * No payment endpoint exists. Courses are free, the
+           * enrolment endpoint says so in as many words, and a page
+           * that offered to take money would be making a promise the
+           * backend cannot keep.
+           */
+          canAcceptPayments: false,
+        },
+      };
     } catch {
-      return null;
+      // An academy slug can never change — the backend refuses to
+      // patch it — so an address that does not resolve was never
+      // held, rather than retired. "moved" is unreachable here.
+      return { outcome: "unknown", value: creatorSlug };
     }
   },
 
-  async startEnrolment(input) {
-    const data = await request("/enrolments", { method: "POST", body: JSON.stringify(input) });
-    return StartResultSchema.parse(data) as StartEnrolmentResult;
+  /**
+   * No endpoint answers this.
+   *
+   * Null means "not known to be enrolled", which is the safe answer:
+   * the worst case is a student who already holds the course sees
+   * the enrol form again, and the backend returns their existing
+   * enrolment rather than creating a second one.
+   */
+  async findEnrolment(_courseId, _phoneE164): Promise<Enrolment | null> {
+    void _courseId;
+    void _phoneE164;
+    return null;
   },
 
-  async confirmEnrolment(reference) {
-    const data = await request(`/enrolments/confirm/${encodeURIComponent(reference)}`);
-    return OutcomeSchema.parse(data) as CheckoutOutcome;
+  async startEnrolment(input: StartEnrolmentInput): Promise<StartEnrolmentResult> {
+    const [firstName, ...rest] = input.details.fullName.trim().split(/\s+/);
+
+    const enrollment = await requestParsed(
+      WireEnrollment,
+      `/api/v1/public/academies/${input.creatorSlug}/courses/${input.courseSlug}/enroll/`,
+      {
+        method: "POST",
+        anonymous: true,
+        unscoped: true,
+        body: {
+          phone: input.details.phone,
+          first_name: firstName ?? "",
+          last_name: rest.join(" "),
+          email: input.details.email,
+        },
+      }
+    );
+
+    // Free courses only, so there is never a handoff. The endpoint
+    // enrols and returns; nothing is pending and nothing is owed.
+    return {
+      kind: "enrolled",
+      enrolment: {
+        id: enrollment.id,
+        studentId: enrollment.id,
+        courseId: enrollment.course.id,
+        student: {
+          id: enrollment.id,
+          name: input.details.fullName,
+          phone: input.details.phone,
+          email: input.details.email,
+          language: "en",
+          joinedAt: enrollment.started_at,
+        },
+        lessonsDelivered: 0,
+        lessonsTotal: 1,
+        quizAverage: null,
+        lastActivityAt: enrollment.started_at,
+        status: "active",
+        enrolledAt: enrollment.started_at,
+        completedAt: null,
+        certificateId: null,
+      } as Enrolment,
+    };
+  },
+
+  /**
+   * There is nothing to confirm.
+   *
+   * Payment has no endpoint, so no reference is ever minted and this
+   * can only be reached by someone typing a return URL by hand.
+   */
+  async confirmEnrolment(reference): Promise<CheckoutOutcome> {
+    return { status: "unknown-reference", reference };
   },
 };

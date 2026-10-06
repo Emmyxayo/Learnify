@@ -18,6 +18,7 @@ import type {
   WireLesson,
   WireRosterEntry,
   WireAssetKind,
+  WirePublicCourseDetail,
 } from "./wire";
 import type { z } from "zod";
 
@@ -366,4 +367,81 @@ export function toEnrolment(
     // ABSENT: no certificates.
     certificateId: null,
   } as Enrolment;
+}
+
+/* ------------------------------------------------------------------ *
+ * The public course
+ *
+ * A narrower payload than the studio's: lesson titles but no bodies,
+ * which is the backend deciding what a prospect may read before
+ * buying rather than an omission to route around. The outline is
+ * mapped so the sales page can show the shape of the course; the
+ * lessons come back empty-bodied by design.
+ * ------------------------------------------------------------------ */
+
+export function toPublicCourse(
+  w: WirePublicCourseDetail,
+  academySlug: string
+): Course {
+  const modules: Module[] = w.modules.map((m, mi) => ({
+    id: m.id,
+    courseId: w.id,
+    title: m.title,
+    objectives: splitObjectives(m.summary).map((text, i) => ({
+      id: `${m.id}-obj-${i}`,
+      text,
+      aiGenerated: false,
+    })),
+    order: mi,
+    lessons: m.lessons.map((l, li) => ({
+      id: l.id,
+      moduleId: m.id,
+      title: l.title,
+      // Withheld until enrolment. Empty here is the correct value,
+      // not a missing one.
+      body: "",
+      order: li,
+      attachments: [],
+      hasQuiz: false,
+      aiFields: [],
+    })),
+    aiFields: [],
+  }));
+
+  return {
+    id: w.id,
+    creatorId: academySlug,
+    creatorName: w.academy,
+    slug: w.slug,
+    title: w.title,
+    subtitle: w.subtitle,
+    description: w.description,
+    category: "business",
+    level: "beginner",
+    // Only published courses are reachable through the public API at
+    // all, so anything that arrives here is live by definition.
+    status: "published",
+    price: naira(w.price_kobo / 100),
+    compareAtPrice: null,
+    schedule:
+      w.schedule_type === "immediate"
+        ? { mode: "immediate" }
+        : w.schedule_type === "weekly"
+          ? { mode: "weekly", dayOfWeek: 1, sendAt: "08:00" }
+          : w.schedule_type === "custom"
+            ? {
+                mode: "custom",
+                everyHours: Math.max(1, w.drip_interval_days) * 24,
+                sendAt: "08:00",
+              }
+            : { mode: "daily", sendAt: "08:00" },
+    coverImageUrl: w.cover,
+    modules,
+    aiGenerated: false,
+    enrolmentCount: 0,
+    rating: null,
+    ratingCount: 0,
+    createdAt: w.published_at ?? new Date().toISOString(),
+    publishedAt: w.published_at,
+  } as Course;
 }

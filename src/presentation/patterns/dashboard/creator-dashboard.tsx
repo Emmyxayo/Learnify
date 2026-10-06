@@ -5,6 +5,7 @@ import { Button } from "@ui/ui/button";
 import { StatCard, StatCardSkeleton } from "@ui/ui/stat-card";
 import { StatusBanner } from "@ui/ui/status-banner";
 import { LiveEngine } from "@ui/patterns/live-engine";
+import { FEATURES } from "@shared/lib/features";
 import { useSession } from "@app-layer/auth/use-session";
 import { useDashboardSummary } from "@app-layer/dashboard/queries";
 import { formatCount, formatNaira } from "@shared/lib/format";
@@ -58,11 +59,17 @@ function DashboardBody({ summary, creatorId }: { summary: DashboardSummary; crea
 
       {/* Delivery leads on the phone. It is the thing that is actually
           happening right now, and the reason a creator opens this at
-          all hours. */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <LiveEngine creatorId={creatorId} />
+          all hours — when there is a message log behind it. Without
+          one the panel has nothing true to show, so enrolments take
+          the full width rather than sitting beside an empty frame. */}
+      {FEATURES.whatsappDelivery ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <LiveEngine creatorId={creatorId} />
+          <RecentEnrolments enrolments={summary.recentEnrolments} />
+        </div>
+      ) : (
         <RecentEnrolments enrolments={summary.recentEnrolments} />
-      </div>
+      )}
     </>
   );
 }
@@ -74,12 +81,17 @@ function Stats({ summary }: { summary: DashboardSummary }) {
     /* Two up at 360px. Four stacked cards push delivery below the fold
        on a phone, and one per row wastes half the screen. */
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <StatCard
-        icon={Wallet}
-        label="Revenue this month"
-        value={formatNaira(revenue)}
-        valueCompact={formatNaira(revenue, { compact: true })}
-      />
+      {/* Revenue needs payments, and there are none. A card reading
+          ₦0 says "you earned nothing this month", which is a
+          different and much worse sentence than "not wired up". */}
+      {FEATURES.payments && (
+        <StatCard
+          icon={Wallet}
+          label="Revenue this month"
+          value={formatNaira(revenue)}
+          valueCompact={formatNaira(revenue, { compact: true })}
+        />
+      )}
       <StatCard
         icon={Users}
         label="Active students"
@@ -95,7 +107,7 @@ function Stats({ summary }: { summary: DashboardSummary }) {
       />
       <StatCard
         icon={SendHorizontal}
-        label="Lessons sent this week"
+        label={FEATURES.whatsappDelivery ? "Lessons sent this week" : "Lessons released this week"}
         value={summary.lessonsDeliveredThisWeek.toLocaleString("en-NG")}
         valueCompact={formatCount(summary.lessonsDeliveredThisWeek)}
       />

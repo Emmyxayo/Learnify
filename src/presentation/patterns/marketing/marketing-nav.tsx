@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FEATURES } from "@shared/lib/features";
 import { GraduationCap, Menu } from "lucide-react";
 import { buttonClasses } from "@ui/ui/button";
 import { EXAMPLE_COURSE_PATH } from "./links";
@@ -9,7 +10,7 @@ import { EXAMPLE_COURSE_PATH } from "./links";
  */
 export const NAV_LINKS = [
   { href: "/features", label: "Features" },
-  { href: "/pricing", label: "Pricing" },
+  ...(FEATURES.plans ? [{ href: "/pricing", label: "Pricing" }] : []),
   /* Not a product page — a tool. Someone holding a printed certificate
      needs it, has never heard of Learnify, and will not go looking in
      a footer for it. */
@@ -97,7 +98,7 @@ const FOOTER_SECTIONS = [
     title: "Product",
     links: [
       { href: "/features", label: "Features" },
-      { href: "/pricing", label: "Pricing" },
+      ...(FEATURES.plans ? [{ href: "/pricing", label: "Pricing" }] : []),
       { href: EXAMPLE_COURSE_PATH, label: "See a real course" },
     ],
   },

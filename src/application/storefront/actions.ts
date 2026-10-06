@@ -31,6 +31,8 @@ import type {
 
 export async function startEnrolment(input: {
   courseId: string;
+  creatorSlug: string;
+  courseSlug: string;
   details: EnrolDetails;
   returnUrl: string;
 }): Promise<StartEnrolmentResult> {

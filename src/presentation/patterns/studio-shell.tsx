@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
-  ChartNoAxesColumn,
   ClipboardCheck,
   Ellipsis,
   LayoutDashboard,
@@ -24,6 +23,7 @@ import { useCreator } from "@app-layer/creator/queries";
 import type { Creator } from "@core/entities/creator";
 import { OnboardingBanner } from "./onboarding/onboarding-banner";
 import { AcademySwitcher } from "./academy-switcher";
+import { FEATURES } from "@shared/lib/features";
 
 /* ============================================================
    Navigation
@@ -38,16 +38,24 @@ import { AcademySwitcher } from "./academy-switcher";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
+/* A destination is listed only when it can answer. Submissions,
+   certificates and analytics have no endpoints behind them, so on a
+   live build they are not offered — a nav item that leads to a screen
+   which cannot load is worse than no nav item, because the creator
+   spends a tap finding out. */
 const PRIMARY: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/courses", label: "Courses", icon: BookOpen },
   { href: "/students", label: "Students", icon: Users },
-  { href: "/submissions", label: "Submissions", icon: ClipboardCheck },
+  ...(FEATURES.submissions
+    ? [{ href: "/submissions", label: "Submissions", icon: ClipboardCheck }]
+    : []),
 ];
 
 const SECONDARY: NavItem[] = [
-  { href: "/certificates", label: "Certificates", icon: Award },
-  { href: "/analytics", label: "Analytics", icon: ChartNoAxesColumn },
+  ...(FEATURES.certificates
+    ? [{ href: "/certificates", label: "Certificates", icon: Award }]
+    : []),
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

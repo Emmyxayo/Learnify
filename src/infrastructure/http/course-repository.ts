@@ -6,11 +6,12 @@ import { query, request, requestPage, requestParsed, ApiError } from "./http-cli
 import {
   WireCourse,
   WireCourseDetail,
+  WirePublicCourseDetail,
   WirePublishBlockers,
   type WireCourseWriteRequest,
   type WireReorderRequest,
 } from "./wire";
-import { toCourse } from "./mappers";
+import { toCourse, toPublicCourse } from "./mappers";
 
 /**
  * The studio's course tree.
@@ -73,11 +74,26 @@ export const httpCourseRepository: CourseRepository = {
     }
   },
 
-  /** Public lookup; see the storefront repository for the real one. */
-  async getBySlug(_creatorSlug, _courseSlug) {
-    void _creatorSlug;
-    void _courseSlug;
-    return null;
+  /**
+   * The sales page's course, read anonymously.
+   *
+   * Public and unscoped: the caller is a stranger with no session and
+   * no academy header. The payload is narrower than the studio's —
+   * lesson titles but no bodies — which is the backend deciding what
+   * a prospect may see, not an oversight to work around.
+   */
+  async getBySlug(creatorSlug, courseSlug) {
+    try {
+      const w = await requestParsed(
+        WirePublicCourseDetail,
+        `/api/v1/public/academies/${creatorSlug}/courses/${courseSlug}/`,
+        { anonymous: true, unscoped: true }
+      );
+
+      return toPublicCourse(w, creatorSlug);
+    } catch {
+      return null;
+    }
   },
 
   async create(input: CreateCourseInput) {

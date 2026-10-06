@@ -15,6 +15,7 @@ import { SectionWhatsApp } from "./section-whatsapp";
 import { SectionPayments } from "./section-payments";
 import { SectionSubscription } from "./section-subscription";
 import { SectionAccount } from "./section-account";
+import { FEATURES } from "@shared/lib/features";
 
 /**
  * Settings, as routes.
@@ -60,6 +61,23 @@ export function SettingsScreen({ section }: { section: SettingsSection }) {
  * A scrolling row on a phone, a list on a desktop. Links either way —
  * so middle-click opens a tab and the back button does what it should.
  */
+/**
+ * Only the sections that can do something.
+ *
+ * Plan and billing has no backend at all. Payments and WhatsApp are
+ * both connection flows to third parties the backend does not talk
+ * to, so they would collect a creator's details and then have
+ * nowhere to send them — which is worse than not offering the
+ * screen, because it looks like it worked.
+ */
+const visibleSections = (): readonly SettingsSection[] =>
+  SETTINGS_SECTIONS.filter((s) => {
+    if (s === "subscription") return FEATURES.plans;
+    if (s === "payments") return FEATURES.payments;
+    if (s === "whatsapp") return FEATURES.whatsappDelivery;
+    return true;
+  });
+
 function SectionNav({ current }: { current: SettingsSection }) {
   return (
     <nav
@@ -67,7 +85,7 @@ function SectionNav({ current }: { current: SettingsSection }) {
       className="-mx-5 shrink-0 overflow-x-auto px-5 lg:mx-0 lg:w-56 lg:overflow-visible lg:px-0"
     >
       <ul className="flex gap-1.5 lg:flex-col lg:gap-0.5">
-        {SETTINGS_SECTIONS.map((s) => {
+        {visibleSections().map((s) => {
           const active = s === current;
           return (
             <li key={s} className="shrink-0">

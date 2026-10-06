@@ -4,12 +4,23 @@ import { buttonClasses } from "@ui/ui/button";
 import { DeliveryFeed } from "@ui/patterns/delivery-feed";
 import { SAMPLE_FEED } from "./sample-feed";
 import { EXAMPLE_COURSE_PATH } from "./links";
+import { FEATURES } from "@shared/lib/features";
 
-const PROOF = [
-  { label: "No app for your students", detail: "Lessons arrive in the chat they already use all day." },
-  { label: "Courses built from your material", detail: "Upload your notes; the builder drafts the lessons." },
-  { label: "Certificates anyone can check", detail: "A code on the certificate, a page that verifies it." },
-];
+/* Three claims, and each one has to be true of the build a reader is
+   looking at. The WhatsApp delivery engine, the AI builder and the
+   certificate service are not finished, so on a live build this
+   says what the product does today instead of what it is for. */
+const PROOF = FEATURES.whatsappDelivery
+  ? [
+      { label: "No app for your students", detail: "Lessons arrive in the chat they already use all day." },
+      { label: "Courses built from your material", detail: "Upload your notes; the builder drafts the lessons." },
+      { label: "Certificates anyone can check", detail: "A code on the certificate, a page that verifies it." },
+    ]
+  : [
+      { label: "Nothing to install", detail: "Students open a link and start. No app, no password." },
+      { label: "A lesson at a time", detail: "Set the pace once; the course releases itself from there." },
+      { label: "Priced in naira", detail: "Built for Nigeria, not translated into it." },
+    ];
 
 /**
  * Hero and delivery panel, together in the first viewport.
@@ -29,10 +40,10 @@ export function Hero() {
     <section className="container-page pb-14 pt-10 sm:pt-16">
       <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
         {/* --- The claim ------------------------------------- */}
-        <div className="lg:col-span-7">
+        <div className={FEATURES.whatsappDelivery ? "lg:col-span-7" : "lg:col-span-8"}>
           <p className="inline-flex items-center gap-1.5 rounded-pill border border-brand-border bg-brand-subtle px-3 py-1 text-sm font-semibold text-brand">
             <MessageCircle className="size-3.5" aria-hidden />
-            WhatsApp-native
+            {FEATURES.whatsappDelivery ? "WhatsApp-native" : "Built for Nigeria"}
           </p>
 
           <h1 className="mt-5 text-[2.5rem] font-bold leading-[1.02] tracking-[-0.03em] text-ink sm:text-display lg:text-display-xl">
@@ -40,8 +51,9 @@ export function Hero() {
           </h1>
 
           <p className="prose-measure mt-5 text-lg leading-relaxed text-body">
-            Build a course from the material you already have, set a price in naira, and let
-            every lesson arrive on WhatsApp. Your students need a phone number. That is all.
+            {FEATURES.whatsappDelivery
+              ? "Build a course from the material you already have, set a price in naira, and let every lesson arrive on WhatsApp. Your students need a phone number. That is all."
+              : "Build a course from the material you already have, release it a lesson at a time, and let your students learn from a link. No app to install, no password to forget."}
           </p>
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -75,16 +87,23 @@ export function Hero() {
             Shorter on a phone: enough bubbles to show what this is,
             not so many that the rest of the page starts below the
             fourth screen. */}
-        <div className="lg:col-span-5">
-          <DeliveryFeed
-            messages={SAMPLE_FEED}
-            listHeight="max-h-[26rem] lg:max-h-[34rem]"
-          />
-          <p className="mt-3 text-center text-sm text-muted lg:text-left">
-            The delivery panel inside the studio. The names and lessons in it are made up; the
-            panel is the real one.
-          </p>
-        </div>
+        {/* The delivery panel is evidence for a claim about WhatsApp,
+            so it only belongs next to one. Without a message log
+            behind it there is nothing for it to show, and a mocked-up
+            feed beside a real headline is the kind of thing a reader
+            is right to resent finding out about. */}
+        {FEATURES.whatsappDelivery && (
+          <div className="lg:col-span-5">
+            <DeliveryFeed
+              messages={SAMPLE_FEED}
+              listHeight="max-h-[26rem] lg:max-h-[34rem]"
+            />
+            <p className="mt-3 text-center text-sm text-muted lg:text-left">
+              The delivery panel inside the studio. The names and lessons in it are made up; the
+              panel is the real one.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
