@@ -3,6 +3,7 @@ import type { Enrolment } from "@core/entities/student";
 import { onePage } from "@core/value-objects/page";
 import { ENROLMENT_FIXTURES } from "./fixtures/students";
 import { COURSE_FIXTURES } from "./fixtures/courses";
+import { lessonCount } from "@core/entities/course";
 import { MockApiError, simulate } from "./latency";
 
 let enrolments: Enrolment[] = structuredClone(ENROLMENT_FIXTURES);
@@ -36,5 +37,49 @@ export const mockStudentRepository: StudentRepository = {
     const updated: Enrolment = { ...found, lastActivityAt: new Date().toISOString() };
     enrolments = enrolments.map((e) => (e.id === enrolmentId ? updated : e));
     return simulate(updated);
+  },
+
+  async enrolManually({ courseId, phone, firstName, lastName, email }) {
+    const course = COURSE_FIXTURES.find((c) => c.id === courseId);
+    if (!course) throw new MockApiError("That course no longer exists.");
+
+    /* The phone number is the identity, so adding one that is already
+       on this course is a mistake worth catching rather than a second
+       seat for the same person. */
+    const clash = enrolments.find(
+      (e) => e.courseId === courseId && e.student.phone === phone
+    );
+    if (clash) {
+      throw new MockApiError("That number is already enrolled on this course.");
+    }
+
+    const now = new Date().toISOString();
+    const id = `enr_${Math.random().toString(36).slice(2, 10)}`;
+    // One id, used in both places — they are the same student.
+    const studentId = `stu_${Math.random().toString(36).slice(2, 10)}`;
+    const created: Enrolment = {
+      id,
+      studentId,
+      courseId,
+      student: {
+        id: studentId,
+        name: [firstName, lastName].filter(Boolean).join(" ").trim() || phone,
+        phone,
+        email: email || null,
+        language: "en",
+        joinedAt: now,
+      },
+      lessonsDelivered: 0,
+      lessonsTotal: Math.max(1, lessonCount(course)),
+      quizAverage: null,
+      lastActivityAt: now,
+      status: "active",
+      enrolledAt: now,
+      completedAt: null,
+      certificateId: null,
+    };
+
+    enrolments = [created, ...enrolments];
+    return simulate(created);
   },
 };

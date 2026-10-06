@@ -219,7 +219,16 @@ export function PasswordSignInForm() {
         </Button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-muted">
+      <p className="mt-4 text-center text-sm">
+        <Link
+          href="/reset-password"
+          className="font-semibold text-brand hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </p>
+
+      <p className="mt-3 text-center text-sm text-muted">
         <Link href="/sign-in" className="font-semibold text-brand hover:underline">
           Use a one-time code instead
         </Link>

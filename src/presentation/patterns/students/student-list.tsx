@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Users } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@ui/patterns/data-table";
+import { AddStudent } from "./add-student";
 import { EnrolmentStatusChip } from "@ui/ui/enrolment-status-chip";
 import { useSession } from "@app-layer/auth/use-session";
 import { useEnrolments } from "@app-layer/student/queries";
@@ -37,6 +38,14 @@ export function StudentList() {
       .filter((c) => present.has(c.id))
       .map((c) => ({ value: c.id, label: c.title }));
   }, [rows, courses.data]);
+
+  /* Adding somebody is the opposite list: every course they could be
+     put on, including the ones nobody has joined yet — which is
+     exactly where a first student usually goes. */
+  const addableCourses = useMemo(
+    () => (courses.data?.items ?? []).map((c) => ({ id: c.id, title: c.title })),
+    [courses.data]
+  );
 
   const columns = useMemo<ColumnDef<Enrolment>[]>(
     () => [
@@ -130,11 +139,14 @@ export function StudentList() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-heading text-ink sm:text-title">Students</h1>
-        <p className="mt-1.5 text-muted">
-          Everyone enrolled in your courses, and how far they have got.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-heading text-ink sm:text-title">Students</h1>
+          <p className="mt-1.5 text-muted">
+            Everyone enrolled in your courses, and how far they have got.
+          </p>
+        </div>
+        <AddStudent courses={addableCourses} />
       </header>
 
       <DataTable

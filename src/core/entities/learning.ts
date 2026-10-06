@@ -112,3 +112,31 @@ export function lockedLabel(lesson: Release, now: Date = new Date()): string {
   if (days <= 1) return "Opens tomorrow";
   return `Opens in ${days} days`;
 }
+
+/* ------------------------------------------------------------------ *
+ * Notifications
+ *
+ * The portal's own inbox. The product was designed to reach students
+ * on WhatsApp; the backend reaches them here instead, which makes
+ * this the only place a student is actually told that a lesson has
+ * opened. That is why it belongs in the shell rather than on a page
+ * of its own that nobody would visit.
+ * ------------------------------------------------------------------ */
+
+export const NotificationSchema = z.object({
+  id: z.string(),
+  /** Free-form on the backend — a label, not a closed set. */
+  kind: z.string(),
+  title: z.string(),
+  body: z.string(),
+  /** In-app path, or "" when it points nowhere. */
+  link: z.string(),
+  readAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type Notification = z.infer<typeof NotificationSchema>;
+
+export const isUnread = (n: Notification) => n.readAt === null;
+
+export const unreadCount = (items: Notification[]) =>
+  items.filter(isUnread).length;

@@ -138,3 +138,41 @@ function seedSession(qc: ReturnType<typeof useQueryClient>, result: AuthSuccess)
   qc.setQueryData(authKeys.me(), result.creator);
   qc.setQueryData(creatorKeys.detail(result.creator.id), result.creator);
 }
+
+/* --- Password reset, and change -------------------------------
+   The request half resolves for any address, because the backend
+   answers the same way whether or not one exists. Nothing
+   downstream may assume a message was actually sent.
+   ------------------------------------------------------------ */
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (identifier: string) =>
+      repositories.auth.requestPasswordReset(identifier),
+  });
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: (input: {
+      identifier: string;
+      code: string;
+      newPassword: string;
+    }) =>
+      repositories.auth.confirmPasswordReset(
+        input.identifier,
+        input.code,
+        input.newPassword
+      ),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: {
+      currentPassword: string | null;
+      newPassword: string;
+    }) =>
+      repositories.auth.changePassword(input.currentPassword, input.newPassword),
+  });
+}

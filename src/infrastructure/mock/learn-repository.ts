@@ -3,6 +3,7 @@ import type {
   LearnerEnrolment,
   LearnerEnrolmentDetail,
   LearnerLesson,
+  Notification,
 } from "@core/entities/learning";
 import type { Release } from "@core/entities/release";
 import { onePage } from "@core/value-objects/page";
@@ -178,4 +179,47 @@ export const mockLearnRepository: LearnRepository = {
       completedAt: new Date().toISOString(),
     });
   },
+
+  async listNotifications() {
+    return simulate(onePage(notifications));
+  },
+
+  async markNotificationsRead() {
+    const now = new Date().toISOString();
+    notifications = notifications.map((n) => ({ ...n, readAt: n.readAt ?? now }));
+    return simulate(undefined, { latency: 200 });
+  },
 };
+
+/* Two unread and one already seen — enough to show the badge, the
+   read and unread rows, and what the list looks like after it is
+   cleared. */
+let notifications: Notification[] = [
+  {
+    id: "ntf_1",
+    kind: "lesson_released",
+    title: "Lesson 3 is open",
+    body: "Pricing that actually sells is ready for you.",
+    link: "/learn",
+    readAt: null,
+    createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+  },
+  {
+    id: "ntf_2",
+    kind: "lesson_released",
+    title: "Lesson 2 is open",
+    body: "Finding your first ten customers is ready for you.",
+    link: "/learn",
+    readAt: null,
+    createdAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
+  },
+  {
+    id: "ntf_3",
+    kind: "enrolled",
+    title: "You are in",
+    body: "Your first lesson opens straight away.",
+    link: "/learn",
+    readAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+  },
+];

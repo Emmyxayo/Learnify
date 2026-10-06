@@ -5,11 +5,12 @@ import type {
   LearnerLesson,
 } from "@core/entities/learning";
 import { mapPage, type Page } from "@core/value-objects/page";
-import { query, requestPage, requestParsed } from "./http-client";
+import { query, request, requestPage, requestParsed } from "./http-client";
 import {
   WireEnrollment,
   WireEnrollmentDetail,
   WireLesson,
+  WireNotification,
   WireProgress,
   type WireRelease,
 } from "./wire";
@@ -139,5 +140,34 @@ export const httpLearnRepository: LearnRepository = {
         { method: "POST", unscoped: true }
       )
     );
+  },
+
+  /* Unscoped like everything else here: a student belongs to no
+     academy, and their inbox spans whichever ones they bought from. */
+  async listNotifications() {
+    const page = await requestPage(
+      WireNotification,
+      `/api/v1/learn/notifications/${query({ page_size: 50, ordering: "-created_at" })}`,
+      { unscoped: true }
+    );
+
+    return mapPage(page, (n) => ({
+      id: n.id,
+      kind: n.kind,
+      title: n.title,
+      body: n.body,
+      link: n.link,
+      readAt: n.read_at,
+      createdAt: n.created_at,
+    }));
+  },
+
+  /* The endpoint marks everything, so the UI offers exactly that and
+     no per-item control that would quietly clear the rest. */
+  async markNotificationsRead() {
+    await request("/api/v1/learn/notifications/", {
+      method: "POST",
+      unscoped: true,
+    });
   },
 };

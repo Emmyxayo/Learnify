@@ -255,6 +255,26 @@ export const mockAuthRepository: AuthRepository = {
     return simulate(undefined, { latency: 300 });
   },
 
+  /* Resolves for any address, exactly as the backend does — the
+     screen after it must not depend on knowing whether the account
+     was real. */
+  async requestPasswordReset() {
+    return simulate(undefined, { latency: 300 });
+  },
+
+  async confirmPasswordReset(_identifier, code) {
+    if (code !== MOCK_OTP_CODE) {
+      throw new Error("That code did not match. Check it and try again.");
+    }
+    // No password is stored here, so there is nothing to change. Any
+    // password already signs in — see signInWithPassword.
+    return simulate(undefined, { latency: 300 });
+  },
+
+  async changePassword() {
+    return simulate(undefined, { latency: 300 });
+  },
+
   async getSession() {
     return simulate(readSessionCookie(), { latency: 150 });
   },

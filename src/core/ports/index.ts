@@ -8,7 +8,11 @@ export type {
   ReissueResult,
   UploadedBackground,
 } from "./certificate-repository";
-export type { StudentRepository, StudentFilters } from "./student-repository";
+export type {
+  StudentRepository,
+  StudentFilters,
+  ManualEnrolInput,
+} from "./student-repository";
 export type {
   SubmissionRepository,
   SubmissionFilters,

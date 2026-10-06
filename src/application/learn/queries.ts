@@ -9,6 +9,7 @@ export const learnKeys = {
   enrolment: (id: string) => [...learnKeys.all, "enrolment", id] as const,
   lesson: (enrolmentId: string, lessonId: string) =>
     [...learnKeys.all, "lesson", enrolmentId, lessonId] as const,
+  notifications: () => [...learnKeys.all, "notifications"] as const,
 };
 
 /** Every course this person is taking. */
@@ -91,6 +92,62 @@ export function useMarkComplete(enrolmentId: string) {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: key });
       qc.invalidateQueries({ queryKey: learnKeys.enrolments() });
+    },
+  });
+}
+
+/**
+ * The portal inbox.
+ *
+ * Polled, because the thing it reports — a lesson opening on a
+ * schedule — happens while the page is sitting there, and a student
+ * who has to reload to find out has not been notified of anything.
+ * Two minutes is far below any drip interval and costs one small
+ * request.
+ */
+export function useNotifications() {
+  return useQuery({
+    queryKey: learnKeys.notifications(),
+    queryFn: () => repositories.learn.listNotifications(),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => repositories.learn.markNotificationsRead(),
+
+    /* Optimistic: the badge clearing the moment it is opened is the
+       whole gesture, and the worst case is a count that comes back. */
+    onMutate: async () => {
+      const key = learnKeys.notifications();
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData(key);
+      const now = new Date().toISOString();
+
+      qc.setQueryData(key, (prev: unknown) => {
+        if (!prev || typeof prev !== "object" || !("items" in prev)) return prev;
+        const page = prev as { items: { readAt: string | null }[] };
+        return {
+          ...page,
+          items: page.items.map((n) => ({ ...n, readAt: n.readAt ?? now })),
+        };
+      });
+
+      return { previous };
+    },
+
+    onError: (_e, _v, context) => {
+      if (context?.previous) {
+        qc.setQueryData(learnKeys.notifications(), context.previous);
+      }
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: learnKeys.notifications() });
     },
   });
 }

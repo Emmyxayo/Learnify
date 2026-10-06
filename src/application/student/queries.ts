@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { repositories } from "@infra/container";
-import type { StudentFilters } from "@core/ports";
+import type { ManualEnrolInput, StudentFilters } from "@core/ports";
 import { studentKeys } from "./query-keys";
 import { dashboardKeys } from "../dashboard/query-keys";
 
@@ -52,6 +52,28 @@ export function useNudgeStudent(enrolmentId: string) {
     onSuccess: (enrolment) => {
       qc.setQueryData(studentKeys.detail(enrolment.id), enrolment);
       qc.invalidateQueries({ queryKey: studentKeys.lists() });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+    },
+  });
+}
+
+/**
+ * Adding a student by hand.
+ *
+ * Not optimistic. Unlike reordering a module, this creates a person
+ * on a course and can be refused — a number already enrolled, a
+ * number the backend will not accept — and a row that appears and
+ * then vanishes is worse than one that takes a second to arrive.
+ */
+export function useEnrolStudentManually() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ManualEnrolInput) =>
+      repositories.students.enrolManually(input),
+    onSuccess: (enrolment) => {
+      qc.setQueryData(studentKeys.detail(enrolment.id), enrolment);
+      qc.invalidateQueries({ queryKey: studentKeys.lists() });
+      // The roster count and the recent-enrolments list both move.
       qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });

@@ -502,6 +502,43 @@ export const httpAuthRepository: AuthRepository = {
     });
   },
 
+  /**
+   * 202 whoever asked, which is the point: answering differently for
+   * an address that exists would turn this into a way to find out
+   * who has an account here.
+   */
+  async requestPasswordReset(identifier) {
+    await request("/api/v1/auth/password/reset/", {
+      method: "POST",
+      body: { identifier },
+      anonymous: true,
+      unscoped: true,
+    });
+  },
+
+  async confirmPasswordReset(identifier, code, newPassword) {
+    await request("/api/v1/auth/password/reset/confirm/", {
+      method: "POST",
+      body: { identifier, code, new_password: newPassword },
+      anonymous: true,
+      unscoped: true,
+    });
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    await request("/api/v1/auth/password/change/", {
+      method: "POST",
+      // Omitted rather than sent as null when there is none: the
+      // field is optional, and an explicit null is a different thing
+      // to a serializer than an absent key.
+      body: {
+        ...(currentPassword ? { current_password: currentPassword } : {}),
+        new_password: newPassword,
+      },
+      unscoped: true,
+    });
+  },
+
   async getSession(): Promise<Session | null> {
     await rehydrate();
     const access = getRefresh();

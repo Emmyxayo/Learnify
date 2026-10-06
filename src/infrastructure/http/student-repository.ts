@@ -2,7 +2,7 @@ import type { StudentRepository, StudentFilters } from "@core/ports";
 import type { Enrolment } from "@core/entities/student";
 import { onePage, type Page } from "@core/value-objects/page";
 import { query, requestPage, requestParsed, ApiError } from "./http-client";
-import { WireCourse, WireRosterEntry } from "./wire";
+import { WireCourse, WireEnrollment, WireRosterEntry } from "./wire";
 import { toEnrolment } from "./mappers";
 
 /**
@@ -22,7 +22,10 @@ import { toEnrolment } from "./mappers";
 
 const PAGE = 100;
 
-async function rosterFor(courseId: string): Promise<Enrolment[]> {
+async function rosterFor(
+  courseId: string,
+  options: { search?: string } = {}
+): Promise<Enrolment[]> {
   const detail = await requestParsed(
     WireCourse,
     `/api/v1/studio/courses/${courseId}/`
@@ -30,7 +33,10 @@ async function rosterFor(courseId: string): Promise<Enrolment[]> {
 
   const page = await requestPage(
     WireRosterEntry,
-    `/api/v1/studio/courses/${courseId}/students/${query({ page_size: PAGE })}`
+    `/api/v1/studio/courses/${courseId}/students/${query({
+      page_size: PAGE,
+      search: options.search,
+    })}`
   );
 
   return page.items.map((row) =>
@@ -77,6 +83,75 @@ export const httpStudentRepository: StudentRepository = {
       501,
       "Nudging a student needs a message channel, and there is no send endpoint yet."
     );
+  },
+
+  /**
+   * Adding somebody by hand.
+   *
+   * The reply is an Enrollment — the student's own view of their
+   * enrolment — and it carries no student record, because from that
+   * side the student is implied. The roster row does carry one, so it
+   * is read straight back with `search` on the phone number, which
+   * finds exactly the person just added however long the roster is.
+   *
+   * Worth the extra call: without it the screen either shows a row
+   * with no name on it or refetches the whole roster to find out what
+   * it just created.
+   */
+  async enrolManually({ courseId, phone, firstName, lastName, email }) {
+    const created = await requestParsed(
+      WireEnrollment,
+      `/api/v1/studio/courses/${courseId}/enroll/`,
+      {
+        method: "POST",
+        body: {
+          phone,
+          first_name: firstName ?? "",
+          last_name: lastName ?? "",
+          email: email || null,
+        },
+      }
+    );
+
+    const found = await rosterFor(courseId, { search: phone }).catch(
+      (): Enrolment[] => []
+    );
+
+    const row =
+      found.find((r) => r.id === created.id) ??
+      found.find((r) => r.student.phone === phone);
+
+    if (row) return row;
+
+    /* The read-back failed or matched nothing — the enrolment itself
+       still succeeded, so this reports what was created rather than
+       an error. Everything here is either from the response or from
+       what was just typed; the student's own id is the one thing
+       neither carries, and the roster supplies it on next load. */
+    return {
+      id: created.id,
+      studentId: "",
+      courseId,
+      student: {
+        id: "",
+        name: [firstName, lastName].filter(Boolean).join(" ").trim() || phone,
+        phone,
+        email: email || null,
+        language: "en",
+        joinedAt: created.started_at,
+      },
+      lessonsDelivered: 0,
+      /* CourseSummary carries no lesson count, and a brand-new
+         enrolment has delivered none either way, so progress reads
+         0% here and corrects itself on the next roster load. */
+      lessonsTotal: 1,
+      quizAverage: null,
+      lastActivityAt: created.started_at,
+      status: created.status === "cancelled" ? "refunded" : created.status,
+      enrolledAt: created.started_at,
+      completedAt: created.completed_at,
+      certificateId: null,
+    } satisfies Enrolment;
   },
 };
 

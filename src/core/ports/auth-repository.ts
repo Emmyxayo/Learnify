@@ -138,6 +138,36 @@ export interface AuthRepository {
     code: string
   ): Promise<void>;
 
+  /* --- Getting back in, and staying in ---------------------
+     A forgotten password is the other half of having one. The
+     backend answers the request the same way whether or not the
+     account exists, so neither of these can be used to find out
+     who has an account here — which is why the screen says "if
+     that account exists" rather than promising a message.
+     --------------------------------------------------------- */
+
+  /** Sends a reset code. Resolves even when nobody owns that address. */
+  requestPasswordReset(identifier: string): Promise<void>;
+
+  /** Sets the new password against the code. Mints no session. */
+  confirmPasswordReset(
+    identifier: string,
+    code: string,
+    newPassword: string
+  ): Promise<void>;
+
+  /**
+   * Changes the password of the account already signed in.
+   *
+   * `currentPassword` is null for an account that has none yet — one
+   * created by a one-time code — where there is nothing to confirm
+   * against. The backend treats it as optional for that reason.
+   */
+  changePassword(
+    currentPassword: string | null,
+    newPassword: string
+  ): Promise<void>;
+
   /** The live session, however the implementation stores it. Null when signed out. */
   getSession(): Promise<Session | null>;
 

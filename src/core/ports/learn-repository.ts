@@ -2,6 +2,7 @@ import type {
   LearnerEnrolment,
   LearnerEnrolmentDetail,
   LearnerLesson,
+  Notification,
 } from "../entities/learning";
 import type { Progress } from "../entities/release";
 import type { Page } from "../value-objects/page";
@@ -34,4 +35,17 @@ export interface LearnRepository {
 
   /** Marks it done. Returns what the server now thinks of their progress. */
   markComplete(enrolmentId: string, lessonId: string): Promise<Progress>;
+
+  /**
+   * The portal's inbox, newest first.
+   *
+   * This is the delivery channel that actually exists. The product
+   * was designed around WhatsApp and the backend releases lessons to
+   * the web instead, so this notice is how a student learns that
+   * something opened.
+   */
+  listNotifications(): Promise<Page<Notification>>;
+
+  /** Marks the whole inbox read. There is no per-item endpoint. */
+  markNotificationsRead(): Promise<void>;
 }

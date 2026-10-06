@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Providers } from "../providers";
+import { NotificationBell } from "@ui/patterns/learn/notification-bell";
 
 /**
  * The student's chrome.
@@ -19,6 +20,7 @@ export default function LearnLayout({ children }: { children: ReactNode }) {
             <Link href="/learn" className="font-bold tracking-tight text-brand">
               Learnify
             </Link>
+            <NotificationBell />
           </div>
         </header>
         {children}

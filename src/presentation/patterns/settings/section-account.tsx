@@ -15,6 +15,7 @@ import { StatusBanner } from "@ui/ui/status-banner";
 import { SavedNote } from "@ui/patterns/onboarding/step-chrome";
 import { SettingsCard } from "./settings-screen";
 import { PhoneChangeDialog } from "./phone-change-dialog";
+import { PasswordCard } from "./password-card";
 
 export function SectionAccount({ creator }: { creator: Creator }) {
   const save = useUpdateAccount(creator.id);
@@ -122,6 +123,8 @@ export function SectionAccount({ creator }: { creator: Creator }) {
           </p>
         )}
       </SettingsCard>
+
+      <PasswordCard />
 
       <PhoneChangeDialog
         open={changingPhone}
