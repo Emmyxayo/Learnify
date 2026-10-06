@@ -30,3 +30,4 @@ export type {
   CreateAcademyInput,
   UpdateAcademyInput,
 } from "./academy-repository";
+export type { LearnRepository } from "./learn-repository";

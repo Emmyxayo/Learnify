@@ -9,8 +9,10 @@ import type {
   StudentRepository,
   SubmissionRepository,
   AcademyRepository,
+  LearnRepository,
 } from "@core/ports";
 import { mockAcademyRepository } from "./mock/academy-repository";
+import { mockLearnRepository } from "./mock/learn-repository";
 import { mockCourseRepository } from "./mock/course-repository";
 import { mockDeliveryRepository } from "./mock/delivery-repository";
 import { mockCreatorRepository } from "./mock/creator-repository";
@@ -25,6 +27,7 @@ import {
   type PaymentSandbox,
 } from "./mock/storefront-repository";
 import { httpAcademyRepository } from "./http/academy-repository";
+import { httpLearnRepository } from "./http/learn-repository";
 import { httpCourseRepository } from "./http/course-repository";
 import { httpCreatorRepository } from "./http/creator-repository";
 import { httpAuthRepository } from "./http/auth-repository";
@@ -45,6 +48,7 @@ const useMocks = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") === "mock";
 export const repositories = {
   academies: (useMocks ? mockAcademyRepository : httpAcademyRepository) as AcademyRepository,
   courses: (useMocks ? mockCourseRepository : httpCourseRepository) as CourseRepository,
+  learn: (useMocks ? mockLearnRepository : httpLearnRepository) as LearnRepository,
   creators: (useMocks ? mockCreatorRepository : httpCreatorRepository) as CreatorRepository,
   auth: (useMocks ? mockAuthRepository : httpAuthRepository) as AuthRepository,
   dashboard: (useMocks ? mockDashboardRepository : httpDashboardRepository) as DashboardRepository,
