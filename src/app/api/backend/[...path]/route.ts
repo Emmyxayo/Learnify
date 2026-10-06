@@ -79,7 +79,25 @@ async function proxy(request: NextRequest): Promise<Response> {
    */
   const url = new URL(request.url);
   const path = url.pathname.slice(PREFIX.length) || "/";
-  const target = `${ORIGIN}${path}${url.search}`;
+
+  /*
+   * Put the trailing slash back.
+   *
+   * Django treats /auth/register/ and /auth/register as different
+   * URLs, and APPEND_SLASH cannot redirect a POST — it 404s instead,
+   * because replaying a body across a redirect is not something it
+   * will do silently. Next strips the slash before this handler ever
+   * runs (trailingSlash defaults to false), so by the time the path
+   * arrives here it is already the version Django refuses.
+   *
+   * Every path on this API wants one, and nothing with a file
+   * extension routes through here — uploaded media comes back as
+   * absolute URLs on another host — so adding it unconditionally is
+   * safe rather than merely convenient.
+   */
+  const last = path.split("/").pop() ?? "";
+  const needsSlash = !path.endsWith("/") && !last.includes(".");
+  const target = `${ORIGIN}${path}${needsSlash ? "/" : ""}${url.search}`;
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {

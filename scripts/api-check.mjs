@@ -128,13 +128,29 @@ async function call(path, { method = "GET", body, auth = false, academy = false 
   }
 }
 
-/** One line of context for a failing response, never the whole body. */
-const why = (r) =>
-  r.status === 0
-    ? r.error
-    : r.json?.detail
-      ? `${r.status} — ${r.json.detail}`
-      : `${r.status}${r.text ? ` — ${r.text.slice(0, 90)}` : ""}`;
+/**
+ * One line of context for a failing response, never the whole body.
+ *
+ * This backend wraps errors as {error: {message, details}}, which its
+ * OpenAPI document does not mention — without unwrapping it here,
+ * every failure below would read as a slab of JSON.
+ */
+function why(r) {
+  if (r.status === 0) return r.error;
+
+  const envelope = r.json?.error;
+  if (envelope) {
+    const fields = envelope.details
+      ? Object.entries(envelope.details)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)
+          .join("; ")
+      : "";
+    return `${r.status} — ${envelope.message ?? ""}${fields ? ` (${fields})` : ""}`;
+  }
+
+  if (r.json?.detail) return `${r.status} — ${r.json.detail}`;
+  return `${r.status}${r.text ? ` — ${r.text.slice(0, 90)}` : ""}`;
+}
 
 /* ------------------------------------------------------------------ *
  * 1. Reachability and CORS

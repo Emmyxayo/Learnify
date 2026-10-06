@@ -80,12 +80,31 @@ export class ApiError extends Error {
   }
 }
 
+/** Pulls {field: ["msg"]} out of whatever object holds it. */
+function collectFieldErrors(record: Record<string, unknown>) {
+  const fieldErrors: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (Array.isArray(value)) fieldErrors[key] = value.map(String);
+    else if (typeof value === "string") fieldErrors[key] = [value];
+  }
+  return fieldErrors;
+}
+
 /**
- * DRF reports failure three different ways and the difference is not
- * meaningful to a person: `{detail}` for most errors, `{field: [...]}`
- * for serializer validation, and `{non_field_errors: [...]}` for rules
- * that span fields. Normalising here means a form never has to guess
- * which shape it got.
+ * Failure arrives in four shapes and the difference is not meaningful
+ * to a person, so a form never has to guess which one it got.
+ *
+ * The first is this backend's own and is NOT in its OpenAPI document,
+ * which declares only `{detail}`:
+ *
+ *   {"error": {"code": "validation_error",
+ *              "message": "Validation failed.",
+ *              "details": {"email": ["This field is required."]}}}
+ *
+ * The other three are DRF's defaults, still reachable from anything
+ * that raises before the custom handler runs: `{detail}` for most
+ * errors, `{field: [...]}` for serializer validation, and
+ * `{non_field_errors: [...]}` for rules spanning fields.
  */
 function normaliseError(status: number, body: unknown): ApiError {
   if (!body || typeof body !== "object") {
@@ -94,19 +113,33 @@ function normaliseError(status: number, body: unknown): ApiError {
 
   const record = body as Record<string, unknown>;
 
+  // This backend's envelope.
+  const envelope = record.error;
+  if (envelope && typeof envelope === "object") {
+    const e = envelope as Record<string, unknown>;
+    const details =
+      e.details && typeof e.details === "object"
+        ? collectFieldErrors(e.details as Record<string, unknown>)
+        : {};
+
+    /* The envelope's own message first — it is written for a person.
+       A field error only stands in when there is nothing better, and
+       it is prefixed so "This field is required" is not left floating
+       with no indication of which field. */
+    const firstField = Object.entries(details)[0];
+    const summary =
+      (typeof e.message === "string" && e.message) ||
+      (firstField ? `${firstField[0]}: ${firstField[1][0]}` : "") ||
+      `Request failed (${status})`;
+
+    return new ApiError(status, summary, details, body);
+  }
+
   if (typeof record.detail === "string") {
     return new ApiError(status, record.detail, {}, body);
   }
 
-  const fieldErrors: Record<string, string[]> = {};
-  for (const [key, value] of Object.entries(record)) {
-    if (Array.isArray(value)) {
-      fieldErrors[key] = value.map(String);
-    } else if (typeof value === "string") {
-      fieldErrors[key] = [value];
-    }
-  }
-
+  const fieldErrors = collectFieldErrors(record);
   const summary =
     fieldErrors.non_field_errors?.[0] ??
     Object.values(fieldErrors)[0]?.[0] ??
