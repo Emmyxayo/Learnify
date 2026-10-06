@@ -44,10 +44,15 @@ const args = Object.fromEntries(
 
 const env = { ...readEnvFile(".env.local"), ...readEnvFile(".env") };
 
+/*
+ * When NEXT_PUBLIC_API_URL is relative the app is proxying through
+ * itself, so the thing worth checking is the API behind the proxy —
+ * and CORS no longer applies to it at all.
+ */
+const configured = args.base ?? env.NEXT_PUBLIC_API_URL ?? "https://api.learnifyng.tech";
+const PROXIED = configured.startsWith("/");
 const BASE = (
-  args.base ??
-  env.NEXT_PUBLIC_API_URL ??
-  "https://api.learnifyng.tech"
+  PROXIED ? (env.LEARNIFY_API_ORIGIN ?? "https://api.learnifyng.tech") : configured
 ).replace(/\/$/, "");
 
 /**
@@ -164,6 +169,14 @@ async function checkTransport() {
     return false;
   }
 
+  if (PROXIED) {
+    pass(
+      "CORS not applicable",
+      `the app proxies through ${configured}, so the browser never goes cross-origin`
+    );
+    return true;
+  }
+
   const allowOrigin = pre.headers.get("access-control-allow-origin");
   const allowHeaders = (pre.headers.get("access-control-allow-headers") ?? "").toLowerCase();
 
@@ -180,6 +193,14 @@ async function checkTransport() {
     console.log(
       `  ${c.dim}Backend fix: add ${ORIGIN} to CORS_ALLOWED_ORIGINS.${c.reset}`
     );
+    console.log(
+      `\n  ${c.dim}You do not have to wait for it. CORS is a browser rule, not a${c.reset}`
+    );
+    console.log(
+      `  ${c.dim}server one, so proxy through this app instead — in .env.local:${c.reset}`
+    );
+    console.log(`    ${c.dim}NEXT_PUBLIC_API_URL=/api/backend${c.reset}`);
+    console.log(`    ${c.dim}LEARNIFY_API_ORIGIN=${BASE}${c.reset}`);
   }
 
   for (const header of ["authorization", "content-type", "x-academy"]) {
