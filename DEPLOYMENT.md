@@ -85,17 +85,28 @@ npm run api:check
 
 ## 3. DNS
 
-### Do not move the nameservers
+### What is in the zone
 
 DNS for this domain is at **Hostinger** (`aster.dns-parking.com`,
-`helios.dns-parking.com`), and as published today:
+`helios.dns-parking.com`). This is the live state, after the change:
 
 | Record | Value | What it is |
 |---|---|---|
-| `learnifyng.tech` A | `2.57.91.91` | Hostinger parking — this is the one to change |
-| `api.learnifyng.tech` A | `69.62.111.152` | **the backend** |
-| `www` CNAME | `learnifyng.tech` | follows the apex |
-| MX, TXT | none | no email or verification to preserve |
+| `learnifyng.tech` A | `216.198.79.1` | Vercel |
+| `www` CNAME | `edec2c3c2b575cc6.vercel-dns-017.com` | Vercel, redirects to the apex |
+| `api.learnifyng.tech` A | `69.62.111.152` | **the backend** — never touched |
+| `resend._domainkey` TXT | DKIM key | Resend |
+| `send` CNAME | `send.forge.rmta.net` | Resend |
+| `rsend` CNAME | `rsend-euw1.forge.rmta.net` | Resend |
+
+The apex was `2.57.91.91` (Hostinger parking) and `www` pointed at the
+apex. Those two rows are the only ones that changed.
+
+The three Resend records matter more than they look: somebody already
+set up email sending for this domain. See the note at the end of this
+file about why no verification email arrives.
+
+### Do not move the nameservers
 
 Pointing the nameservers at Vercel moves the whole zone, and every
 record not recreated there stops resolving — **including `api`, which
@@ -112,17 +123,25 @@ In Vercel: **Settings → Domains → Add** `learnifyng.tech`, then add
 
 Then at Hostinger, change exactly two records:
 
-| Type | Name | From | To |
-|---|---|---|---|
-| `A` | `@` | `2.57.91.91` | `76.76.21.21` |
-| `CNAME` | `www` | `learnifyng.tech` | `cname.vercel-dns.com` |
+| Type | Name | To |
+|---|---|---|
+| `A` | `@` | `216.198.79.1` |
+| `CNAME` | `www` | `edec2c3c2b575cc6.vercel-dns-017.com` |
 
 **Leave the `api` A record exactly as it is.** Nothing about this
 deployment touches the backend's address.
 
-Vercel prints the values it wants on the Domains screen. If they
-differ from these, use Vercel's — they are authoritative and these
-were correct at the time of writing.
+**Read the values off Vercel's Domains screen rather than copying
+these.** Vercel is expanding its IP range and the per-domain CNAME
+above is specific to this project — the widely documented
+`76.76.21.21` and `cname.vercel-dns.com` still work, but are now the
+legacy pair and Vercel flags them with a "DNS Change Recommended"
+warning.
+
+Two things hPanel does that will trip you up: the apex row's Name may
+show as `@` or blank, and its TTL minimum is 60 even though Hostinger's
+own parking setup writes 50 — so an unedited row refuses to save until
+you raise it. 300 is a fine value for both.
 
 ### Later, if you want per-academy subdomains
 
@@ -220,3 +239,15 @@ Until that is fixed nobody can complete sign-up, which means none of
 the studio screens can be exercised against the real backend. The
 frontend side of it is finished and tested against every response
 shape the API returns.
+
+The DNS zone narrows it considerably. `resend._domainkey`, `send` and
+`rsend` are all present and point at `forge.rmta.net`, which is
+Resend's sending infrastructure — so the domain setup for email was
+already done by someone. That rules out "no mail provider" and leaves
+three likelier causes, in order of how cheap they are to check:
+
+1. `RESEND_API_KEY` is not set in the deployed environment.
+2. The domain is added in Resend but still shows unverified there.
+3. Sends are queued to a worker that is not running in production.
+
+Checking the Resend dashboard answers the first two in a minute.
