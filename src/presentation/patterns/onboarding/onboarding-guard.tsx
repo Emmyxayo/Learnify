@@ -9,6 +9,13 @@ import {
   nextActionableStep,
   type Creator,
 } from "@core/entities/creator";
+import {
+  CREATE_ACADEMY,
+  DASHBOARD,
+  ONBOARDING,
+  SIGN_IN,
+  onboardingStep,
+} from "@shared/lib/routes";
 
 type Area = "studio" | "setup";
 
@@ -60,18 +67,18 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
   if (area === "studio") {
     /* Authenticated-only, and with no signed-out state of its own to
        fall back on — an empty dashboard explains nothing. */
-    if (!creator) return "/sign-in";
+    if (!creator) return SIGN_IN;
 
     const destination = creatorDestination(creator);
-    if (destination.area === "auth") return "/sign-in";
-    if (destination.area === "academy") return "/setup/academy";
+    if (destination.area === "auth") return SIGN_IN;
+    if (destination.area === "academy") return CREATE_ACADEMY;
 
     /* A half-onboarded creator is welcome here. Only the two things
        that make the studio meaningless send them back: an unverified
        phone, and a missing academy name. A skipped BVN check or an
        unconnected payout account is the banner's job, not a
        redirect's — they can still build and publish. */
-    if (destination.area === "setup") return `/onboarding/${destination.step}`;
+    if (destination.area === "setup") return onboardingStep(destination.step);
     return null;
   }
 
@@ -81,13 +88,13 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
   if (!creator) return null;
 
   const destination = creatorDestination(creator);
-  if (destination.area === "auth") return "/sign-in";
+  if (destination.area === "auth") return SIGN_IN;
 
   /* Someone with no academy inside setup belongs on the create
      screen, and is already there or on their way — not bounced
      between the wizard and itself. */
   if (destination.area === "academy") {
-    return pathname === "/setup/academy" ? null : "/setup/academy";
+    return pathname === CREATE_ACADEMY ? null : CREATE_ACADEMY;
   }
 
   if (destination.area !== "studio") return null;
@@ -96,7 +103,7 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
      a link to /onboarding/subdomain wants to change their address, and
      bouncing them would make every deep link into setup unreachable
      the moment setup is finished. */
-  if (pathname !== "/onboarding") return null;
+  if (pathname !== ONBOARDING) return null;
 
-  return nextActionableStep(creator) === null ? "/dashboard" : null;
+  return nextActionableStep(creator) === null ? DASHBOARD : null;
 }

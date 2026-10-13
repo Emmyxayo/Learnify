@@ -9,6 +9,7 @@ import {
   useSwitchAcademy,
   useActiveAcademySlug,
 } from "@app-layer/academy/queries";
+import { CREATE_ACADEMY } from "@shared/lib/routes";
 
 /**
  * Which academy the studio is pointed at.
@@ -117,7 +118,7 @@ export function AcademySwitcher({ fallbackName }: { fallbackName: string }) {
 
           <div className="border-t border-border">
             <Link
-              href="/setup/academy"
+              href={CREATE_ACADEMY}
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand hover:bg-surface-sunken"
             >

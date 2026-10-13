@@ -16,6 +16,24 @@ const nextConfig: NextConfig = {
    * production and nowhere else. It is worth adding, in report-only
    * first.
    */
+  /**
+   * `(setup)` is a route group, so its pages serve at `/academy` and
+   * `/onboarding` — the parentheses never reach the URL. Five
+   * components redirected to `/setup/academy` anyway and every one of
+   * them 404'd. They are fixed, but the dead path has already been in
+   * production and may sit in a history entry or a bookmark.
+   *
+   * Permanent, and a prefix rather than the one path: if a `/setup/…`
+   * link survives somewhere I did not find, this lands it on the real
+   * route instead of a 404.
+   */
+  async redirects() {
+    return [
+      { source: "/setup", destination: "/onboarding", permanent: true },
+      { source: "/setup/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

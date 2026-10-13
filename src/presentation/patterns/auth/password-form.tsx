@@ -16,6 +16,7 @@ import {
 } from "@app-layer/auth/queries";
 import type { VerificationChannel } from "@core/ports";
 import { allShownInline, fieldError } from "@shared/lib/field-errors";
+import { CREATE_ACADEMY, DASHBOARD } from "@shared/lib/routes";
 import { AuthCard } from "./auth-card";
 import { VerifyAccount } from "./verify-account";
 
@@ -115,7 +116,7 @@ export function PasswordSignInForm() {
     }
 
     setPending(null);
-    router.push(result.auth.isNewCreator ? "/setup/academy" : "/dashboard");
+    router.push(result.auth.isNewCreator ? CREATE_ACADEMY : DASHBOARD);
   }
 
   async function submit(e: React.FormEvent) {
@@ -261,7 +262,7 @@ export function PasswordSignUpForm() {
 
   /* Registering creates an account, not an academy. That is the next
      thing, and the only thing, this person can do. */
-  const onward = () => router.push("/setup/academy");
+  const onward = () => router.push(CREATE_ACADEMY);
 
   /* The serializer rejects by field and names every one it objected
      to at once, so each goes under the field it belongs to. */
