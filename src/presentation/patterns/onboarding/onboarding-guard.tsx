@@ -16,6 +16,7 @@ import {
   SIGN_IN,
   onboardingStep,
 } from "@shared/lib/routes";
+import { AVAILABLE_ONBOARDING_STEPS } from "@shared/lib/features";
 
 type Area = "studio" | "setup";
 
@@ -116,5 +117,7 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
      the moment setup is finished. */
   if (pathname !== ONBOARDING) return null;
 
-  return nextActionableStep(creator) === null ? DASHBOARD : null;
+  return nextActionableStep(creator, AVAILABLE_ONBOARDING_STEPS) === null
+    ? DASHBOARD
+    : null;
 }

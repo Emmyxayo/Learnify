@@ -1,157 +1,255 @@
-import { z } from "zod";
 import type { CreatorRepository } from "@core/ports";
-import { CreatorSchema, type Creator } from "@core/entities/creator";
-import { OtpChallengeSchema, PhoneChangeResultSchema } from "@core/entities/session";
-import { InvoiceSchema } from "@core/entities/subscription";
+import type { Creator } from "@core/entities/creator";
 import { SubdomainAvailabilitySchema } from "@core/value-objects/subdomain";
-import { request } from "./http-client";
+import { ApiError, getActiveAcademy, query, request, requestParsed } from "./http-client";
+import { WireAcademy, WireMe, WireSlugAvailability } from "./wire";
+import { toCreator } from "./mappers";
 
 /**
- * Every response is parsed through the same Zod schema the mocks
- * satisfy, so backend drift surfaces as a loud, located error rather
- * than `undefined` three components deep.
+ * The creator, assembled from the two records the backend actually
+ * has.
+ *
+ * This file used to call `/creators/{id}`, `/creators/{id}/profile`,
+ * `/subdomains/check` and a dozen more. None of them exist — not at
+ * those paths, not at any path, and without even the `/api/v1`
+ * prefix every other call here carries. It was written against the
+ * original contract and never migrated, and nothing caught it because
+ * `getById` answered a 404 with `catch { return null }`.
+ *
+ * That null is what froze onboarding: the resume screen reads the
+ * creator from here, got null forever, and sat on "Finding where you
+ * left off" with nothing to find.
+ *
+ * There is no creator resource on this backend. A Creator is Me plus
+ * an Academy — the same seam `mappers.toCreator` already describes,
+ * and the same one `auth-repository.buildCreator` builds from. So
+ * reads go to `/auth/me/`, and the writes that have a home go to
+ * `PATCH /auth/me/` or `PATCH /academies/{slug}/`.
+ *
+ * The rest throw. Identity checks, payouts, WhatsApp connections,
+ * plans and invoices have no endpoints at all, and a repository that
+ * quietly returns the unchanged creator would have the wizard report
+ * success for something that never happened.
  */
-const parse = (data: unknown): Creator => CreatorSchema.parse(data);
+
+function notAvailable(what: string): never {
+  throw new ApiError(
+    501,
+    `${what} is not available yet — the backend has no endpoint for it.`
+  );
+}
+
+/** The one read. Everything else re-reads through it after writing. */
+async function readCreator(): Promise<Creator | null> {
+  let me: WireMe;
+  try {
+    me = await requestParsed(WireMe, "/api/v1/auth/me/", { unscoped: true });
+  } catch (error) {
+    // A 401 means signed out, which is a real answer. Anything else is
+    // a failure and must not be reported as "no creator" — see
+    // auth-repository.readMe for why that distinction matters.
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+
+  const slug = me.academies[0]?.slug ?? null;
+  if (!slug) return toCreator(me, null);
+
+  try {
+    const academy = await requestParsed(
+      WireAcademy,
+      `/api/v1/academies/${slug}/`,
+      { unscoped: true }
+    );
+    return toCreator(me, academy);
+  } catch {
+    // Named in the membership list but the record would not load. A
+    // creator without branding beats no creator at all.
+    return toCreator(me, null);
+  }
+}
+
+/** After a write. The creator is a composite, so re-read the whole thing. */
+async function reread(): Promise<Creator> {
+  const creator = await readCreator();
+  if (!creator) {
+    throw new ApiError(401, "That change was saved but your session has ended.");
+  }
+  return creator;
+}
+
+/** The academy this creator's studio is pointed at. */
+function academySlug(): string {
+  const slug = getActiveAcademy();
+  if (!slug) {
+    throw new ApiError(
+      409,
+      "You have no academy yet. Name one before changing its details."
+    );
+  }
+  return slug;
+}
+
+async function patchAcademy(body: Record<string, unknown>): Promise<Creator> {
+  await request(`/api/v1/academies/${academySlug()}/`, {
+    method: "PATCH",
+    body,
+    unscoped: true,
+  });
+  return reread();
+}
 
 export const httpCreatorRepository: CreatorRepository = {
-  async getById(id) {
-    try {
-      return parse(await request(`/creators/${id}`));
-    } catch {
-      return null;
-    }
+  async getById(_id) {
+    // Addressed by the token, not by the id. The backend has no way to
+    // read a creator other than the one signed in, and nothing asks
+    // it to.
+    void _id;
+    return readCreator();
   },
 
-  async updateProfile(id, input) {
-    return parse(await request(`/creators/${id}/profile`, { method: "PUT", body: JSON.stringify(input) }));
+  /* --- Step 1: the academy's name and what it teaches -------------
+     Both live on the Academy, not the user. `category` has nowhere to
+     go — the backend models none — so it is dropped rather than
+     stored somewhere it would not come back from. */
+  async updateProfile(_id, input) {
+    void _id;
+    return patchAcademy({ name: input.academyName, tagline: input.bio });
   },
 
-  /** The full BVN/NIN goes over the wire once and is never stored client-side. */
-  async submitIdentity(id, input) {
-    return parse(await request(`/creators/${id}/identity`, { method: "POST", body: JSON.stringify(input) }));
+  async updateBranding(_id, branding) {
+    void _id;
+    return patchAcademy({ brand_color: branding.brandColor ?? "" });
   },
 
-  async startPaymentsConnection(id, provider) {
-    const body = (await request(`/creators/${id}/payments/connect`, {
-      method: "POST",
-      body: JSON.stringify({ provider }),
-    })) as { creator: unknown; handoffUrl: string; reference: string };
-    return { creator: parse(body.creator), handoffUrl: body.handoffUrl, reference: body.reference };
-  },
-
-  async completePaymentsConnection(id, reference) {
-    return parse(
-      await request(`/creators/${id}/payments/callback`, {
-        method: "POST",
-        body: JSON.stringify({ reference }),
-      })
-    );
-  },
-
-  async disconnectPayments(id) {
-    return parse(await request(`/creators/${id}/payments`, { method: "DELETE" }));
-  },
-
-  async connectWhatsApp(id, input) {
-    return parse(await request(`/creators/${id}/whatsapp`, { method: "POST", body: JSON.stringify(input) }));
-  },
-
-  async disconnectWhatsApp(id) {
-    return parse(await request(`/creators/${id}/whatsapp`, { method: "DELETE" }));
-  },
-
-  async checkSubdomain(value) {
-    return SubdomainAvailabilitySchema.parse(
-      await request(`/subdomains/check?value=${encodeURIComponent(value)}`)
-    );
-  },
-
-  async confirmSubdomain(id) {
-    return parse(await request(`/creators/${id}/subdomain/confirm`, { method: "POST" }));
-  },
-
-  async claimSubdomain(id, value) {
-    return parse(
-      await request(`/creators/${id}/subdomain`, { method: "PUT", body: JSON.stringify({ value }) })
-    );
-  },
-
-  async setResumeStep(id, step) {
-    return parse(
-      await request(`/creators/${id}/onboarding/resume-step`, {
-        method: "PUT",
-        body: JSON.stringify({ step }),
-      })
-    );
-  },
-
-  async deferStep(id, step) {
-    return parse(
-      await request(`/creators/${id}/onboarding/deferred`, {
-        method: "POST",
-        body: JSON.stringify({ step }),
-      })
-    );
-  },
-
-  async updateBranding(id, branding) {
-    return parse(
-      await request(`/creators/${id}/branding`, {
-        method: "PUT",
-        body: JSON.stringify(branding),
-      })
-    );
-  },
-
-  /** multipart, so it sets no Content-Type and lets the browser add the boundary. */
   async uploadLogo(file) {
-    const body = new FormData();
-    body.append("file", file);
-    const data = (await request(`/creators/logo`, {
-      method: "POST",
-      body,
-      headers: {},
-    })) as { url: string; fileName: string };
-    return { url: data.url, fileName: data.fileName };
-  },
+    const form = new FormData();
+    form.append("logo", file);
 
-  async updateAccount(id, input) {
-    return parse(
-      await request(`/creators/${id}/account`, { method: "PUT", body: JSON.stringify(input) })
+    const uploaded = await requestParsed(
+      WireAcademy,
+      `/api/v1/academies/${academySlug()}/logo/`,
+      { method: "POST", form, unscoped: true }
     );
+
+    return {
+      url: uploaded.logo ?? "",
+      fileName: file.name,
+    };
   },
 
-  async requestPhoneChange(id, newPhone) {
-    return OtpChallengeSchema.parse(
-      await request(`/creators/${id}/phone/change`, {
-        method: "POST",
-        body: JSON.stringify({ phone: newPhone }),
-      })
+  /* --- The account itself -----------------------------------------
+     PATCH /auth/me/ takes first and last name. Email is not among the
+     fields it accepts: changing it would re-open verification, and the
+     backend keeps that for itself. */
+  async updateAccount(_id, input) {
+    void _id;
+    const [firstName, ...rest] = input.fullName.trim().split(/\s+/);
+
+    await request("/api/v1/auth/me/", {
+      method: "PATCH",
+      body: {
+        first_name: firstName ?? "",
+        last_name: rest.join(" ") || (firstName ?? ""),
+      },
+      unscoped: true,
+    });
+
+    return reread();
+  },
+
+  /* --- The address -------------------------------------------------
+     Checking is real. Confirming is not a backend act: the slug is
+     assigned when the academy is created and the backend refuses to
+     change it afterwards, so it arrives already settled and the step
+     is only ever shown what it already is. */
+  async checkSubdomain(value) {
+    const result = await requestParsed(
+      WireSlugAvailability,
+      `/api/v1/academies/slug-available/${query({ slug: value })}`,
+      { unscoped: true }
     );
+
+    return SubdomainAvailabilitySchema.parse({
+      value: result.slug,
+      available: result.available,
+      reason: result.available ? null : "taken",
+      suggestions: [],
+    });
   },
 
-  async confirmPhoneChange(id, challengeId, code) {
-    return PhoneChangeResultSchema.parse(
-      await request(`/creators/${id}/phone/confirm`, {
-        method: "POST",
-        body: JSON.stringify({ challengeId, code }),
-      })
-    );
+  async confirmSubdomain(_id) {
+    void _id;
+    return reread();
   },
 
-  async changePlan(id, input) {
-    return parse(
-      await request(`/creators/${id}/plan`, { method: "PUT", body: JSON.stringify(input) })
-    );
+  async claimSubdomain() {
+    notAvailable("Changing your address");
   },
 
-  async listInvoices(id) {
-    return z.array(InvoiceSchema).parse(await request(`/creators/${id}/invoices`));
+  /* --- Everything with no endpoint ---------------------------------
+     These throw rather than returning the creator untouched. A wizard
+     step that reports success for a write that never left the browser
+     is worse than one that says it cannot do it yet. */
+
+  async submitIdentity() {
+    notAvailable("Identity verification");
   },
 
-  async undeferStep(id, step) {
-    return parse(
-      await request(`/creators/${id}/onboarding/deferred/${step}`, { method: "DELETE" })
-    );
+  async startPaymentsConnection() {
+    notAvailable("Connecting a payout account");
+  },
+
+  async completePaymentsConnection() {
+    notAvailable("Connecting a payout account");
+  },
+
+  async disconnectPayments() {
+    notAvailable("Disconnecting a payout account");
+  },
+
+  async connectWhatsApp() {
+    notAvailable("Connecting WhatsApp");
+  },
+
+  async disconnectWhatsApp() {
+    notAvailable("Disconnecting WhatsApp");
+  },
+
+  async requestPhoneChange() {
+    notAvailable("Changing your login number");
+  },
+
+  async confirmPhoneChange() {
+    notAvailable("Changing your login number");
+  },
+
+  async changePlan() {
+    notAvailable("Changing your plan");
+  },
+
+  async listInvoices() {
+    notAvailable("Invoices");
+  },
+
+  /* --- The wizard's bookmark ---------------------------------------
+     Progress is derived from the records above, not stored, and there
+     is nowhere to keep a bookmark or a deferral. Re-reading is the
+     honest no-op: the caller gets the real current state, and the
+     wizard recomputes where to go from it. */
+
+  async setResumeStep(_id) {
+    void _id;
+    return reread();
+  },
+
+  async deferStep(_id) {
+    void _id;
+    return reread();
+  },
+
+  async undeferStep(_id) {
+    void _id;
+    return reread();
   },
 };

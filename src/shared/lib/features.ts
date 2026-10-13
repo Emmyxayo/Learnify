@@ -27,6 +27,8 @@
    different question and the only one a flag should answer.
    ============================================================ */
 
+import { ONBOARDING_STEPS, type OnboardingStep } from "@core/entities/creator";
+
 const usingApi = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") === "api";
 
 /** An override wins; otherwise a feature is on only where it works. */
@@ -104,3 +106,23 @@ export const hasFeature = (name: FeatureName): boolean => FEATURES[name];
  * a sentence a demo should not show.
  */
 export const isLive = usingApi;
+
+/**
+ * The onboarding steps this build can actually complete.
+ *
+ * Identity exists only to unlock payouts, so it goes when payments
+ * do. WhatsApp needs a send path. Both were still being routed to on
+ * a backend that has neither, which left a creator on a form whose
+ * save had nowhere to go — and, worse, left nextActionableStep
+ * pointing at that step forever, so onboarding could never finish and
+ * the studio was never reachable.
+ *
+ * Naming the academy and having an address both survive: the backend
+ * does those at creation time.
+ */
+export const AVAILABLE_ONBOARDING_STEPS: readonly OnboardingStep[] =
+  ONBOARDING_STEPS.filter((step) => {
+    if (step === "identity" || step === "payments") return FEATURES.payments;
+    if (step === "whatsapp") return FEATURES.whatsappDelivery;
+    return true;
+  });

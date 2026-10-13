@@ -327,9 +327,25 @@ export function stepStatus(c: Creator, step: OnboardingStep): StepStatus {
  * running third-party, and what the creator deferred — an identity
  * check that takes until morning is not a thing to sit and stare at.
  */
-export function nextActionableStep(c: Creator): OnboardingStep | null {
+export function nextActionableStep(
+  c: Creator,
+  /**
+   * Which steps this build offers.
+   *
+   * A parameter because it is not a property of the creator. Against
+   * a backend with no identity check, no payouts and no WhatsApp
+   * send path, those three are not steps the person has left to do —
+   * they are steps that do not exist, and routing someone to a form
+   * that posts nowhere is worse than skipping it.
+   *
+   * Defaults to all of them, which is the whole product and what the
+   * mock implements. src/shared/lib/features.ts narrows it; core
+   * stays unaware of which build it is in.
+   */
+  steps: readonly OnboardingStep[] = ONBOARDING_STEPS
+): OnboardingStep | null {
   return (
-    ONBOARDING_STEPS.find((step) => {
+    steps.find((step) => {
       if (c.onboarding.deferred.includes(step)) return false;
       const status = stepStatus(c, step);
       return status === "todo" || status === "attention";

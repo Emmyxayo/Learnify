@@ -9,6 +9,7 @@ import { StatusBanner } from "@ui/ui/status-banner";
 import { useSession } from "@app-layer/auth/use-session";
 import { useCreator } from "@app-layer/creator/queries";
 import { nextActionableStep } from "@core/entities/creator";
+import { AVAILABLE_ONBOARDING_STEPS } from "@shared/lib/features";
 import { OnboardingShell } from "./onboarding-wizard";
 
 /**
@@ -28,7 +29,9 @@ export function OnboardingResume() {
   const { creator: sessionCreator, isLoading: sessionLoading } = useSession();
   const { data: creator, isError, refetch } = useCreator(sessionCreator?.id ?? null);
 
-  const target = creator ? nextActionableStep(creator) : null;
+  const target = creator
+    ? nextActionableStep(creator, AVAILABLE_ONBOARDING_STEPS)
+    : null;
 
   useEffect(() => {
     if (target) router.replace(`/onboarding/${target}`);
