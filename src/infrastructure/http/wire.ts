@@ -143,10 +143,23 @@ export const WireAuthResponse = WireMe.extend({
 });
 export type WireAuthResponse = z.infer<typeof WireAuthResponse>;
 
+/**
+ * The refresh response.
+ *
+ * `refresh` is optional, and the document saying otherwise is why
+ * this needed fixing. SimpleJWT only returns a new refresh token when
+ * ROTATE_REFRESH_TOKENS is on; with the default off it answers
+ * `{"access": "..."}` and nothing else.
+ *
+ * Requiring it made every refresh throw on parse — and because the
+ * caller swallows that, the failure arrived as "you are signed out"
+ * rather than as an error. The consumer already reads it as optional
+ * (`if (next.refresh) setRefresh(next.refresh)`), so the schema was
+ * the only thing that disagreed.
+ */
 export const WireTokenRefresh = z.object({
   access: z.string(),
-  /** Present when the backend rotates refresh tokens. */
-  refresh: z.string(),
+  refresh: z.string().optional(),
 });
 
 export const WireDetail = z.object({ detail: z.string() });

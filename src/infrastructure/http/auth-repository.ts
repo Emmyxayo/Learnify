@@ -235,6 +235,34 @@ async function buildCreator(me: WireMe): Promise<Creator> {
   }
 }
 
+/**
+ * GET /me, with null meaning "nobody is signed in" and NOTHING else.
+ *
+ * This used to be `catch { return null }`, which is the same line in
+ * two places and the reason a creator could be thrown back to
+ * sign-in by a transport error. Null is what the guard reads as "no
+ * session", so a 500, a dropped connection or a schema that drifted
+ * all arrived as a silent sign-out — the one outcome that destroys
+ * work and that the person cannot act on, from causes that have
+ * nothing to do with their session.
+ *
+ * Only a 401 that survived a refresh attempt means signed out. The
+ * HTTP client has already tried the refresh token and already
+ * cleared the stored tokens by the time that surfaces.
+ *
+ * Everything else rethrows, so the query reports an error, the guard
+ * leaves the person where they are, and the screen can say that
+ * something failed instead of pretending they were never here.
+ */
+async function readMe(): Promise<WireMe | null> {
+  try {
+    return await requestParsed(WireMe, "/api/v1/auth/me/", { unscoped: true });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * The repository
  * ------------------------------------------------------------------ */
@@ -541,29 +569,19 @@ export const httpAuthRepository: AuthRepository = {
 
   async getSession(): Promise<Session | null> {
     await rehydrate();
-    const access = getRefresh();
-    if (!access) return null;
-    try {
-      const me = await requestParsed(WireMe, "/api/v1/auth/me/", {
-        unscoped: true,
-      });
-      return sessionFrom(access, me.user.id);
-    } catch {
-      return null;
-    }
+    const token = getRefresh();
+    if (!token) return null;
+
+    const me = await readMe();
+    return me && sessionFrom(token, me.user.id);
   },
 
   async getCurrentCreator(): Promise<Creator | null> {
     await rehydrate();
     if (!getRefresh()) return null;
-    try {
-      const me = await requestParsed(WireMe, "/api/v1/auth/me/", {
-        unscoped: true,
-      });
-      return await buildCreator(me);
-    } catch {
-      return null;
-    }
+
+    const me = await readMe();
+    return me && (await buildCreator(me));
   },
 
   async signOut() {

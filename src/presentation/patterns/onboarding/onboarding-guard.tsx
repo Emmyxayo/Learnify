@@ -36,7 +36,11 @@ type Area = "studio" | "setup";
 export function OnboardingGuard({ area, children }: { area: Area; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { creator: sessionCreator, isLoading: sessionLoading } = useSession();
+  const {
+    creator: sessionCreator,
+    isLoading: sessionLoading,
+    isError: sessionFailed,
+  } = useSession();
 
   /* The session already carries the creator, so the decision can be made
      as soon as it resolves. useCreator only supplies a fresher copy —
@@ -44,7 +48,14 @@ export function OnboardingGuard({ area, children }: { area: Area; children: Reac
   const { data: liveCreator } = useCreator(sessionCreator?.id ?? null);
   const creator = liveCreator ?? sessionCreator;
 
-  const target = sessionLoading ? null : redirectFor(area, creator, pathname);
+  /* Loading is not "signed out", and neither is a failure.
+     getCurrentCreator answers null only for a 401 that survived a
+     refresh; anything else — a 500, a dropped connection — now
+     throws, and bouncing someone to sign-in over a flaky network
+     would discard whatever they were in the middle of. Staying put
+     lets the screen underneath report the failure and retry. */
+  const undecided = sessionLoading || sessionFailed;
+  const target = undecided ? null : redirectFor(area, creator, pathname);
 
   useEffect(() => {
     if (target) router.replace(target);
