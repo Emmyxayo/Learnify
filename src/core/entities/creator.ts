@@ -362,7 +362,7 @@ export const CAPABILITY_NAMES = ["build-courses", "publish", "sell", "withdraw"]
 export type CapabilityName = (typeof CAPABILITY_NAMES)[number];
 
 export const BLOCKED_BY = [
-  "phone-unverified",
+  "account-unverified",
   "identity-missing",
   "identity-pending",
   "identity-rejected",
@@ -383,9 +383,9 @@ export const BLOCKED_COPY: Record<
   BlockedBy,
   { title: string; message: string; step: OnboardingStep | null }
 > = {
-  "phone-unverified": {
-    title: "Phone not verified",
-    message: "Verify your phone number to continue.",
+  "account-unverified": {
+    title: "Account not confirmed",
+    message: "Confirm your account with the code we sent you to continue.",
     step: null,
   },
   "identity-missing": {
@@ -426,8 +426,11 @@ const paymentsBlocker = (c: Creator): BlockedBy | null =>
   c.payments.status === "connected" ? null : "payments-missing";
 
 export function capabilities(c: Creator): Record<CapabilityName, Capability> {
-  if (c.phoneVerifiedAt === null) {
-    const stopped = blocked("phone-unverified");
+  /* Either channel — see isAccountVerified. Asking only about the
+     phone stopped every email-confirmed creator from building a
+     course, on a backend that never verifies a phone. */
+  if (!isAccountVerified(c)) {
+    const stopped = blocked("account-unverified");
     return { "build-courses": stopped, publish: stopped, sell: stopped, withdraw: stopped };
   }
 
@@ -485,8 +488,34 @@ export type CreatorDestination =
   /** Free to use the product, blockers or not. */
   | { area: "studio" };
 
+/**
+ * Whether the account has been confirmed at all — by either channel.
+ *
+ * This used to ask only about the phone, which is what the product
+ * was designed around: the number is the identity, and a one-time
+ * code to it is what proves the person holds it.
+ *
+ * The backend confirms the EMAIL instead. It refuses login outright
+ * with `email_not_verified` until the code has been entered, and it
+ * has no SMS path at all — `is_phone_verified` is false on every real
+ * account and nothing will ever set it.
+ *
+ * So the phone-only question had two answers and both were wrong:
+ * creatorDestination read it as "not authenticated" and bounced every
+ * confirmed creator back to sign-in forever, and capabilities read it
+ * as "cannot do anything" and would have blocked building a course
+ * for someone who had done nothing wrong.
+ *
+ * Either channel is the honest rule. It keeps the phone-first flow
+ * meaningful where codes reach a phone, and it accepts the
+ * confirmation the backend actually performs. Holding a session is
+ * itself evidence: the backend would not have issued one otherwise.
+ */
+export const isAccountVerified = (c: Creator) =>
+  c.phoneVerifiedAt !== null || c.emailVerifiedAt !== null;
+
 export function creatorDestination(c: Creator): CreatorDestination {
-  if (c.phoneVerifiedAt === null) return { area: "auth" };
+  if (!isAccountVerified(c)) return { area: "auth" };
   if (c.subdomain.value === null) return { area: "academy" };
   if (c.profile === null) return { area: "setup", step: "profile" };
   return { area: "studio" };

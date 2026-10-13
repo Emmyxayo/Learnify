@@ -38,7 +38,7 @@ const PRIORITY: CapabilityName[] = ["build-courses", "sell", "withdraw"];
 
 /** Pending work is not a warning. It is just not done yet. */
 const TONES: Record<BlockedBy, BannerTone> = {
-  "phone-unverified": "danger",
+  "account-unverified": "danger",
   "identity-rejected": "danger",
   "identity-pending": "pending",
   "identity-missing": "warning",
