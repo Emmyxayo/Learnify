@@ -1,4 +1,5 @@
 import type { AuthRepository, RequestOtpInput } from "@core/ports";
+import { maskIdentifier } from "@core/value-objects/identifier";
 import type { Creator } from "@core/entities/creator";
 import {
   OTP_MAX_ATTEMPTS,
@@ -102,15 +103,9 @@ function clearChallenge(): void {
   document.cookie = `${CHALLENGE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
-/** "+2348031234567" -> "+234 803 ••• 4567" */
-function mask(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 7) return phone;
-  const cc = phone.startsWith("+") ? `+${digits.slice(0, 3)}` : "";
-  const head = digits.slice(cc ? 3 : 0, (cc ? 3 : 0) + 3);
-  const tail = digits.slice(-4);
-  return [cc, head, "•••", tail].filter(Boolean).join(" ");
-}
+/* Masking lives in core now, because a code can go to an email and
+   this one only knew how to star out digits — handed an address it
+   returned it whole. See maskIdentifier. */
 
 function freshChallenge(
   identifier: string,
@@ -132,7 +127,7 @@ function freshChallenge(
 
 const toChallenge = (s: StoredChallenge): OtpChallenge => ({
   id: s.id,
-  phoneMasked: mask(s.identifier),
+  sentToMasked: maskIdentifier(s.identifier),
   purpose: s.purpose,
   createdAt: s.createdAt,
   expiresAt: s.expiresAt,
@@ -270,7 +265,7 @@ async function readMe(): Promise<WireMe | null> {
 export const httpAuthRepository: AuthRepository = {
   async requestOtp(input: RequestOtpInput) {
     const body: WireOtpRequestRequest = {
-      identifier: input.phone,
+      identifier: input.identifier,
       purpose: input.purpose === "change-phone" ? "verify_phone" : "login",
     };
 
@@ -281,7 +276,7 @@ export const httpAuthRepository: AuthRepository = {
       unscoped: true,
     });
 
-    const challenge = freshChallenge(input.phone, input.purpose);
+    const challenge = freshChallenge(input.identifier, input.purpose);
     writeChallenge(challenge);
     return toChallenge(challenge);
   },

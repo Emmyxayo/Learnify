@@ -5,8 +5,10 @@ import type { Storefront } from "@core/entities/storefront";
 import type { Enrolment } from "@core/entities/student";
 import { lessonCount } from "@core/entities/course";
 import { scheduleOutcome } from "@core/value-objects/schedule";
-import { formatNgDisplay, whatsappLink } from "@core/value-objects/phone";
+import { whatsappLink } from "@core/value-objects/phone";
 import { formatDate, formatTime } from "@shared/lib/format";
+import { DELIVERY } from "@shared/lib/delivery";
+import { SIGN_IN_WITH_CODE } from "@shared/lib/routes";
 import { buttonClasses } from "@ui/ui/button";
 
 /**
@@ -79,21 +81,29 @@ export function Enrolled({
       </div>
 
       {/* Enrolling creates an account but mints no session — the
-          backend returns an enrolment, not tokens. So the way in is
-          a one-time code to the number they just enrolled with,
-          which is the same door they will use every time after
-          this. Linking straight at /learn would 401 them on the
-          first tap, right after they handed over money. */}
+          backend returns an enrolment, not tokens. So the student
+          has to come in through a door, and this used to point at
+          /sign-in, which redirects to the PASSWORD form whenever
+          passwordAuth is on — the live default. Enrolment never sets
+          a password, so that was a locked door with no key, offered
+          one line under "no password to set up".
+
+          /sign-in/code is the one that fits: a one-time code, to the
+          email they just enrolled with, which is where the OTP
+          endpoints actually send it. Linking straight at /learn
+          would 401 them on the first tap. */}
       <Link
-        href={`/sign-in?next=${encodeURIComponent(`/learn/${enrolment.id}`)}`}
+        href={`${SIGN_IN_WITH_CODE}?next=${encodeURIComponent(`/learn/${enrolment.id}`)}`}
         className={buttonClasses({ size: "lg", className: "mt-5 w-full" })}
       >
         <BookOpen className="size-4" aria-hidden />
         {immediate ? "Start the course" : "Open your course"}
       </Link>
       <p className="mt-2 text-sm text-muted">
-        We will text a code to {formatNgDisplay(enrolment.student.phone)}. No
-        password to set up.
+        {enrolment.student.email
+          ? DELIVERY.codeSentTo(enrolment.student.email)
+          : "We will email you a code."}{" "}
+        No password to set up.
       </p>
 
       {chat && (

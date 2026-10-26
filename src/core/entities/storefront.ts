@@ -103,18 +103,34 @@ export function validateEnrolDetails(input: {
   const errors: Partial<Record<EnrolField, string>> = {};
 
   if (input.fullName.trim().length < 2) {
-    errors.fullName = "Enter your name so your certificate reads correctly.";
+    errors.fullName = "Enter your name so your teacher knows who enrolled.";
   }
 
   if (input.phone.trim().length === 0) {
-    errors.phone = "Enter the WhatsApp number your lessons should go to.";
+    errors.phone = "Enter your mobile number.";
   } else if (!isValidNgMobile(input.phone)) {
     errors.phone = "That is not a Nigerian mobile number. Check the digits.";
   }
 
+  /*
+   * Required, because it is the only way back in.
+   *
+   * This was optional, and on a free course it read as a formality —
+   * the form even said "for your receipt only". But a one-time code
+   * is the only door a student has, and the OTP endpoints send it by
+   * mail; asked for a phone number they answer "if the account
+   * exists, a code has been sent" and send nothing. So a student who
+   * skipped this field enrolled into a course they could never open.
+   *
+   * Phone stays required too — it is still the identity the creator's
+   * roster is keyed on, and the channel lessons move to when a send
+   * path ships.
+   */
   const email = input.email.trim();
-  if (email.length > 0 && !z.string().email().safeParse(email).success) {
-    errors.email = "Check this email address, or leave it empty.";
+  if (email.length === 0) {
+    errors.email = "Enter your email. Your sign-in code goes there.";
+  } else if (!z.string().email().safeParse(email).success) {
+    errors.email = "Check this email address.";
   }
 
   return Object.keys(errors).length > 0 ? errors : null;

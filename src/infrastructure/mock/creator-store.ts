@@ -133,6 +133,24 @@ export const creatorStore = {
     return null;
   },
 
+  /**
+   * By whatever they typed: the account email or the phone number.
+   *
+   * The sign-in form takes either now, because a one-time code has to
+   * go somewhere the backend can actually reach, so the mock has to
+   * resolve either too — otherwise an email signs in against the real
+   * API and reports "no account" against the fixtures.
+   */
+  findByIdentifier(value: string): Creator | null {
+    const needle = value.trim().toLowerCase();
+    for (const c of store.values()) {
+      if (c.phone === value) return tick(c);
+      if (c.email && c.email.toLowerCase() === needle) return tick(c);
+      if (c.googleEmail && c.googleEmail.toLowerCase() === needle) return tick(c);
+    }
+    return null;
+  },
+
   put(creator: Creator): Creator {
     store.set(creator.id, creator);
     return creator;

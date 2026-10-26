@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@ui/ui/button";
 import { Field } from "@ui/ui/field";
-import { PhoneInput } from "@ui/ui/phone-input";
+import { Input } from "@ui/ui/input";
 import { Spinner } from "@ui/ui/spinner";
 import { StatusBanner } from "@ui/ui/status-banner";
 import { useGoogleSignIn, useRequestOtp } from "@app-layer/auth/queries";
@@ -13,6 +13,8 @@ import { FEATURES } from "@shared/lib/features";
 import { AuthCard, GoogleMark } from "./auth-card";
 import { creatorDestination } from "@core/entities/creator";
 import { homeFor, safeNext } from "@shared/lib/routes";
+import { DELIVERY } from "@shared/lib/delivery";
+import { identifierKind, toIdentifier } from "@core/value-objects/identifier";
 
 export function SignInForm() {
   const router = useRouter();
@@ -22,15 +24,33 @@ export function SignInForm() {
   const requestOtp = useRequestOtp();
   const google = useGoogleSignIn();
 
-  const [phoneRaw, setPhoneRaw] = useState("");
-  const [phoneE164, setPhoneE164] = useState<string | null>(null);
+  /*
+   * Either kind, like the password form beside it.
+   *
+   * This was a phone-only field, which read correctly — phone is the
+   * identity in this product — and could not work: the OTP endpoints
+   * deliver by mail, and handed a phone number they answer "if the
+   * account exists, a code has been sent" and send nothing. So the
+   * only door that promised "no password" was the one door nobody
+   * could open, and a student who enrolled with an email had no way
+   * in at all.
+   *
+   * The wire field is `identifier` and the backend decides which
+   * channel it can reach. This takes what they have and says where
+   * the code will land.
+   */
+  const [raw, setRaw] = useState("");
   const [touched, setTouched] = useState(false);
 
-  const phoneError =
-    touched && !phoneE164
-      ? phoneRaw
-        ? "That is not a Nigerian mobile number. Check the digits."
-        : "Enter your WhatsApp number."
+  const identifier = toIdentifier(raw);
+
+  const identifierError =
+    touched && !identifier
+      ? raw.trim().length === 0
+        ? "Enter your email or phone number."
+        : identifierKind(raw) === "email"
+          ? "Check this email address."
+          : "That is not a Nigerian mobile number. Check the digits."
       : null;
 
   const busy = requestOtp.isPending || google.isPending;
@@ -38,10 +58,10 @@ export function SignInForm() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (!phoneE164 || busy) return;
+    if (!identifier || busy) return;
 
     requestOtp.mutate(
-      { phone: phoneE164, purpose: "sign-in" },
+      { identifier, purpose: "sign-in" },
       {
         onSuccess: (challenge) =>
           router.push(
@@ -70,7 +90,7 @@ export function SignInForm() {
   return (
     <AuthCard
       title="Welcome back"
-      subtitle="Sign in with the number your academy sends from."
+      subtitle="We will send you a one-time code. No password needed."
       footer={
         <>
           No academy yet?{" "}
@@ -92,7 +112,7 @@ export function SignInForm() {
 
         {google.isError && (
           <StatusBanner tone="danger" title="Google sign-in did not finish">
-            Try again, or use your WhatsApp number below.
+            Try again, or use the form below.
           </StatusBanner>
         )}
 
@@ -109,23 +129,27 @@ export function SignInForm() {
               </Link>
             }
           >
-            Your account is your WhatsApp number, so start there. You can link
+            Your account is your phone number, so start there. You can link
             {googleUnlinked.email ? ` ${googleUnlinked.email}` : " Google"} afterwards.
           </StatusBanner>
         )}
 
         <form onSubmit={submit} noValidate className="space-y-4">
-          <Field id="phone" label="WhatsApp number" error={phoneError}>
+          <Field
+            id="identifier"
+            label="Email or phone number"
+            error={identifierError}
+            hint={DELIVERY.codeChannelHint}
+          >
             {(props) => (
-              <PhoneInput
-                id={props.id}
-                describedBy={props["aria-describedby"]}
-                invalid={Boolean(phoneError)}
-                value={phoneRaw}
-                onChange={(raw, e164) => {
-                  setPhoneRaw(raw);
-                  setPhoneE164(e164);
-                }}
+              <Input
+                {...props}
+                value={raw}
+                onChange={(e) => setRaw(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 disabled={busy}
                 autoFocus
               />

@@ -16,7 +16,7 @@ import {
 } from "@app-layer/auth/queries";
 import type { VerificationChannel } from "@core/ports";
 import { allShownInline, fieldError } from "@shared/lib/field-errors";
-import { CREATE_ACADEMY, homeFor } from "@shared/lib/routes";
+import { CREATE_ACADEMY, SIGN_IN_WITH_CODE, homeFor } from "@shared/lib/routes";
 import { AuthCard } from "./auth-card";
 import { VerifyAccount } from "./verify-account";
 import { creatorDestination } from "@core/entities/creator";
@@ -233,8 +233,14 @@ export function PasswordSignInForm() {
         </Link>
       </p>
 
+      {/* Not /sign-in: that forwards back here whenever passwordAuth
+          is on, which is exactly when this link is visible — so it
+          used to reload the page it was on. */}
       <p className="mt-3 text-center text-sm text-muted">
-        <Link href="/sign-in" className="font-semibold text-brand hover:underline">
+        <Link
+          href={SIGN_IN_WITH_CODE}
+          className="font-semibold text-brand hover:underline"
+        >
           Use a one-time code instead
         </Link>
       </p>

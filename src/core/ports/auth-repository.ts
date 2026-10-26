@@ -59,8 +59,19 @@ export interface PasswordRegisterInput {
 }
 
 export interface RequestOtpInput {
-  /** E.164. The account. */
-  phone: string;
+  /**
+   * Who to send a code to: an email address or an E.164 phone number.
+   *
+   * Was `phone`, because phone is the identity here. But the thing on
+   * the wire is `identifier`, and which channel a code can actually
+   * reach is the backend's business, not this form's — the OTP
+   * endpoints mail them today and a phone identifier gets the same
+   * "if the account exists, a code has been sent" with nothing sent.
+   * Narrowing this to a phone number made the one-time-code door
+   * unopenable for everybody, and a student enrolling with an email
+   * had no door at all.
+   */
+  identifier: string;
   purpose: OtpPurpose;
   /** Sign-up only. */
   fullName?: string;

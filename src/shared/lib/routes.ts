@@ -42,6 +42,20 @@ export const onboardingStep = (step: OnboardingStep) => `${ONBOARDING}/${step}`;
 export const DASHBOARD = "/dashboard";
 export const SIGN_IN = "/sign-in";
 
+/**
+ * The one-time-code door, reached directly.
+ *
+ * /sign-in forwards to /sign-in/password wherever passwordAuth is on,
+ * which is every live build — so it is the wrong thing to link anyone
+ * at who has no password. A student has none: enrolling creates the
+ * account and never asks for one, and the screen that then offered
+ * "no password to set up" linked them straight at a password form.
+ *
+ * The password screen's own "Use a one-time code instead" pointed at
+ * /sign-in too, so that link bounced back to the page it was on.
+ */
+export const SIGN_IN_WITH_CODE = "/sign-in/code";
+
 /** The student's own courses. Not the studio, and not a wizard. */
 export const LEARN = "/learn";
 

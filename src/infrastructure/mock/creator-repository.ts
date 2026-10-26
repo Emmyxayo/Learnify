@@ -297,6 +297,7 @@ export const mockCreatorRepository: CreatorRepository = {
     const challenge = {
       id: `chl_${Math.random().toString(36).slice(2, 12)}`,
       phone,
+      identifier: phone,
       purpose: "change-phone" as const,
       fullName: null,
       email: null,
@@ -310,7 +311,7 @@ export const mockCreatorRepository: CreatorRepository = {
 
     return {
       id: challenge.id,
-      phoneMasked: `+${phone.slice(1, 4)} ${phone.slice(4, 7)} ••• ${phone.slice(-4)}`,
+      sentToMasked: `+${phone.slice(1, 4)} ${phone.slice(4, 7)} ••• ${phone.slice(-4)}`,
       purpose: challenge.purpose,
       createdAt: challenge.createdAt,
       expiresAt: challenge.expiresAt,
@@ -364,7 +365,7 @@ export const mockCreatorRepository: CreatorRepository = {
        both would take the number their students already message out
        from under them without asking. The settings screen says so. */
     const creator = creatorStore.update(id, {
-      phone: stored.phone,
+      phone: stored.identifier,
       phoneVerifiedAt: new Date().toISOString(),
     });
 

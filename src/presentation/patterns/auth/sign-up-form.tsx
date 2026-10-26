@@ -48,7 +48,10 @@ export function SignUpForm({ prefillEmail }: { prefillEmail?: string }) {
 
     requestOtp.mutate(
       {
-        phone: phoneE164!,
+        /* Sign-up is the one flow that is still a phone number: it is
+           the identity a new creator is minted with, and there is no
+           account yet for an email to resolve to. */
+        identifier: phoneE164!,
         purpose: "sign-up",
         fullName: fullName.trim(),
         email: email.trim() || null,

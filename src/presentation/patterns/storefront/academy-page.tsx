@@ -123,10 +123,23 @@ function CourseRow({
         )}
 
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <BookOpen className="size-3.5" aria-hidden />
-            {plural(lessons, "lesson")}
-          </span>
+          {/* Only when it is actually known.
+
+              The public course list carries no modules and no count —
+              it is id, title, slug, subtitle, cover, price and
+              schedule — so lessonCount reduces over an empty array
+              and every course on the page advertised "0 lessons".
+              A storefront saying a course has nothing in it is worse
+              than one that does not raise the subject; the sales page
+              behind this link has the modules and gets it right.
+
+              Delete this guard when the summary carries a count. */}
+          {lessons > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <BookOpen className="size-3.5" aria-hidden />
+              {plural(lessons, "lesson")}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1.5">
             <Clock className="size-3.5" aria-hidden />
             {describeSchedule(course.schedule)}

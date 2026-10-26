@@ -8,7 +8,12 @@ import {
   type OtpChallenge,
   type VerifyOtpResult,
 } from "@core/entities/session";
-import { maskPhone, toE164 } from "@core/value-objects/phone";
+import { toE164 } from "@core/value-objects/phone";
+import {
+  identifierKind,
+  maskIdentifier,
+  toIdentifier,
+} from "@core/value-objects/identifier";
 import { creatorStore } from "./creator-store";
 import { clearChallenge, readChallenge, writeChallenge, type StoredChallenge } from "./challenge-store";
 import { clearSessionCookie, issueSession, readSessionCookie, writeSessionCookie } from "../session-cookie";
@@ -27,7 +32,7 @@ const expired = (s: StoredChallenge) => new Date(s.expiresAt).getTime() <= Date.
 function toChallenge(s: StoredChallenge): OtpChallenge {
   return {
     id: s.id,
-    phoneMasked: maskPhone(s.phone),
+    sentToMasked: maskIdentifier(s.identifier),
     purpose: s.purpose,
     createdAt: s.createdAt,
     expiresAt: s.expiresAt,
@@ -37,14 +42,14 @@ function toChallenge(s: StoredChallenge): OtpChallenge {
 }
 
 function newChallenge(input: {
-  phone: string;
+  identifier: string;
   purpose: StoredChallenge["purpose"];
   fullName?: string;
   email?: string | null;
 }): StoredChallenge {
   return {
     id: `chl_${Math.random().toString(36).slice(2, 12)}`,
-    phone: input.phone,
+    identifier: input.identifier,
     purpose: input.purpose,
     fullName: input.fullName ?? null,
     email: input.email ?? null,
@@ -55,9 +60,10 @@ function newChallenge(input: {
   };
 }
 
-function announce(phone: string) {
-  // Stands in for the SMS. Without this there is no way to test the flow.
-  console.info(`[mock] OTP for ${phone} is ${MOCK_OTP_CODE}`);
+function announce(identifier: string) {
+  // Stands in for whatever actually delivers. Without this there is
+  // no way to test the flow.
+  console.info(`[mock] OTP for ${identifier} is ${MOCK_OTP_CODE}`);
 }
 
 /** Signing up mints a creator with nothing done and the wizard at step 1. */
@@ -95,12 +101,21 @@ function signIn(creator: Creator, isNewCreator: boolean): VerifyOtpResult {
 
 export const mockAuthRepository: AuthRepository = {
   async requestOtp(input) {
-    const phone = toE164(input.phone);
-    if (!phone) throw new Error("Enter a valid Nigerian mobile number");
+    /* Either kind. A phone number is normalised so the same number
+       typed three ways is one account; an email is taken as given and
+       checked for shape, not for deliverability. */
+    const identifier = toIdentifier(input.identifier);
+    if (!identifier) {
+      throw new Error(
+        identifierKind(input.identifier) === "email"
+          ? "Check this email address."
+          : "Enter a valid Nigerian mobile number"
+      );
+    }
 
-    const challenge = newChallenge({ ...input, phone });
+    const challenge = newChallenge({ ...input, identifier });
     writeChallenge(challenge);
-    announce(phone);
+    announce(identifier);
     return simulate(toChallenge(challenge));
   },
 
@@ -129,7 +144,7 @@ export const mockAuthRepository: AuthRepository = {
       attemptsRemaining: OTP_MAX_ATTEMPTS,
     };
     writeChallenge(refreshed);
-    announce(refreshed.phone);
+    announce(refreshed.identifier);
     return simulate(toChallenge(refreshed));
   },
 
@@ -166,11 +181,25 @@ export const mockAuthRepository: AuthRepository = {
       });
     }
 
-    const existing = creatorStore.findByPhone(stored.phone);
+    const existing = creatorStore.findByIdentifier(stored.identifier);
     if (existing) return simulate(signIn(existing, false));
 
+    /* No account yet, so this is a sign-up — and sign-up is the one
+       flow that still needs a phone, because phone is the identity a
+       creator is minted with. An email with no account behind it has
+       nothing to create from, which is the same dead end the real
+       backend reports. */
+    const phone = toE164(stored.identifier);
+    if (!phone) {
+      return simulate<VerifyOtpResult>({
+        ok: false,
+        failure: "unknown-challenge",
+        attemptsRemaining: stored.attemptsRemaining,
+      });
+    }
+
     const creator = createCreator(
-      stored.phone,
+      phone,
       stored.fullName ?? "New creator",
       stored.email
     );
@@ -210,8 +239,9 @@ export const mockAuthRepository: AuthRepository = {
      ----------------------------------------------------------- */
 
   async signInWithPassword({ identifier }) {
-    const phone = toE164(identifier);
-    const creator = phone ? creatorStore.findByPhone(phone) : null;
+    const creator = creatorStore.findByIdentifier(
+      toIdentifier(identifier) ?? identifier
+    );
     if (!creator) {
       throw new Error("No account uses that number or email.");
     }

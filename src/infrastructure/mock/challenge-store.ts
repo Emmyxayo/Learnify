@@ -5,17 +5,19 @@ import type { OtpPurpose } from "@core/entities/session";
  * outlive a reload, because the cooldown and the attempt counter only
  * mean anything if refreshing the page cannot reset them.
  *
- * The raw phone lives here, which is exactly why it is not in the URL:
- * a cookie on the creator's own device does not end up in browser
- * history, server logs or referrer headers. At integration this file
- * disappears and the row lives in the backend instead.
+ * The raw identifier lives here — an email or a phone number,
+ * whichever the code was sent to — which is exactly why it is not in
+ * the URL: a cookie on the creator's own device does not end up in
+ * browser history, server logs or referrer headers. At integration
+ * this file disappears and the row lives in the backend instead.
  */
 
 const CHALLENGE_COOKIE = "learnify_otp_challenge";
 
 export interface StoredChallenge {
   id: string;
-  phone: string;
+  /** Email or E.164 phone — where the code went. */
+  identifier: string;
   purpose: OtpPurpose;
   fullName: string | null;
   email: string | null;

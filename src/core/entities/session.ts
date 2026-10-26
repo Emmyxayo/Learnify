@@ -21,13 +21,23 @@ export const OtpPurposeSchema = z.enum(["sign-up", "sign-in", "change-phone"]);
 export type OtpPurpose = z.infer<typeof OtpPurposeSchema>;
 
 /**
- * What the client is allowed to know about a challenge. The raw phone
- * never crosses this boundary — the id identifies it server-side, and
- * the masked form is all a verification screen needs to render.
+ * What the client is allowed to know about a challenge. The raw
+ * address never crosses this boundary — the id identifies it
+ * server-side, and the masked form is all a verification screen needs
+ * to render.
  */
 export const OtpChallengeSchema = z.object({
   id: z.string(),
-  phoneMasked: z.string(),          // "+234 803 ••• 4567"
+  /**
+   * Where the code went, masked: "+234 803 ••• 4567" or "a•••a@gmail.com".
+   *
+   * Was `phoneMasked`, from when a code could only go to a phone.
+   * This backend mails them, so the verify screen has to be able to
+   * say "we sent it to your email" and show which one — naming a
+   * phone number the code never went to is how somebody sits
+   * refreshing their SMS.
+   */
+  sentToMasked: z.string(),
   purpose: OtpPurposeSchema,
   createdAt: z.string(),
   expiresAt: z.string(),

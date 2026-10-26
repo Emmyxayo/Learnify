@@ -114,7 +114,7 @@ export function VerifyForm() {
         challenge ? (
           <>
             We sent six digits to the email on your account, for{" "}
-            <span className="font-medium text-body">{challenge.phoneMasked}</span>.
+            <span className="font-medium text-body">{challenge.sentToMasked}</span>.
           </>
         ) : undefined
       }
