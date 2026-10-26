@@ -13,6 +13,7 @@ import {
   CREATE_ACADEMY,
   DASHBOARD,
   ONBOARDING,
+  LEARN,
   SIGN_IN,
   onboardingStep,
 } from "@shared/lib/routes";
@@ -83,6 +84,8 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
 
     const destination = creatorDestination(creator);
     if (destination.area === "auth") return SIGN_IN;
+    /* A student has no studio to be in. Theirs is the portal. */
+    if (destination.area === "student") return LEARN;
     if (destination.area === "academy") return CREATE_ACADEMY;
 
     /* A half-onboarded creator is welcome here. Only the two things
@@ -101,6 +104,7 @@ function redirectFor(area: Area, creator: Creator | null, pathname: string): str
 
   const destination = creatorDestination(creator);
   if (destination.area === "auth") return SIGN_IN;
+  if (destination.area === "student") return LEARN;
 
   /* Someone with no academy inside setup belongs on the create
      screen, and is already there or on their way — not bounced

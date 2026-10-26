@@ -96,6 +96,8 @@ export function toCreator(me: WireMe, academy: WireAcademy | null): Creator {
     email: user.email,
     emailVerifiedAt: user.is_email_verified ? user.date_joined : null,
 
+    isStudent: me.is_student,
+
     // ABSENT: no social linking on the backend.
     googleEmail: null,
     avatarUrl: null,

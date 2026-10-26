@@ -24,7 +24,10 @@
    subdomain mode or path mode) and are absolute rather than relative.
    ============================================================ */
 
-import type { OnboardingStep } from "@core/entities/creator";
+import type {
+  CreatorDestination,
+  OnboardingStep,
+} from "@core/entities/creator";
 
 /** Naming the academy. The first thing a creator does, and the only
     thing they can do until it is done. */
@@ -38,3 +41,44 @@ export const onboardingStep = (step: OnboardingStep) => `${ONBOARDING}/${step}`;
 
 export const DASHBOARD = "/dashboard";
 export const SIGN_IN = "/sign-in";
+
+/** The student's own courses. Not the studio, and not a wizard. */
+export const LEARN = "/learn";
+
+/**
+ * Where a person belongs right now.
+ *
+ * The guard and the three post-sign-in redirects used to each decide
+ * this for themselves, and one of them — `isNewCreator ? academy :
+ * dashboard` — had no idea students existed, so it sent anyone who
+ * had bought a course to "Name your academy".
+ */
+export function homeFor(destination: CreatorDestination): string {
+  switch (destination.area) {
+    case "auth":
+      return SIGN_IN;
+    case "student":
+      return LEARN;
+    case "academy":
+      return CREATE_ACADEMY;
+    case "setup":
+      return onboardingStep(destination.step);
+    case "studio":
+      return DASHBOARD;
+  }
+}
+
+/**
+ * A `?next=` target, or null if it is not safe to follow.
+ *
+ * Only same-site paths. A value starting `//` or with a scheme is an
+ * open redirect — somebody's own sign-in link carrying a stranger's
+ * destination — and those are refused rather than sanitised, because
+ * a half-trusted URL is not worth reasoning about.
+ */
+export function safeNext(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/")) return null;
+  if (raw.startsWith("//")) return null;
+  return raw;
+}

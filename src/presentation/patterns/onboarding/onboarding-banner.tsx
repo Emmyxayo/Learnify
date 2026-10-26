@@ -11,6 +11,7 @@ import {
   type Creator,
 } from "@core/entities/creator";
 import { settingsPathForStep } from "@core/entities/settings";
+import { FEATURES } from "@shared/lib/features";
 
 /**
  * The studio's standing reminder that setup is not finished.
@@ -45,6 +46,29 @@ const TONES: Record<BlockedBy, BannerTone> = {
   "payments-missing": "warning",
 };
 
+/**
+ * Whether a creator can actually clear this blocker in this build.
+ *
+ * Payouts and the identity check that exists to unlock them have no
+ * endpoints here, so `payments.status` is disconnected and
+ * `identity.status` unsubmitted on every account, permanently. The
+ * banner read those as work outstanding and sat on top of every
+ * studio screen telling a creator to connect Paystack — with a
+ * "Finish this now" link to a form that posts nowhere.
+ *
+ * A standing reminder to do something impossible is worse than no
+ * reminder: it is the first thing on the dashboard, it never goes
+ * away, and following it leads nowhere. So the banner only reports
+ * what can actually be done.
+ */
+const CLEARABLE: Record<BlockedBy, boolean> = {
+  "account-unverified": true,
+  "identity-missing": FEATURES.payments,
+  "identity-pending": FEATURES.payments,
+  "identity-rejected": FEATURES.payments,
+  "payments-missing": FEATURES.payments,
+};
+
 export function OnboardingBanner({
   creator,
   className,
@@ -52,7 +76,9 @@ export function OnboardingBanner({
   creator: Creator;
   className?: string;
 }) {
-  const blocker = PRIORITY.map((name) => capability(creator, name)).find((c) => !c.allowed);
+  const blocker = PRIORITY.map((name) => capability(creator, name)).find(
+    (c) => !c.allowed && CLEARABLE[c.blockedBy]
+  );
   if (!blocker || blocker.allowed) return null;
 
   const { blockedBy } = blocker;

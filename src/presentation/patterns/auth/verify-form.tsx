@@ -15,6 +15,8 @@ import {
 } from "@core/entities/session";
 import { AuthCard } from "./auth-card";
 import { formatCountdown, useSecondsRemaining } from "./use-countdown";
+import { creatorDestination } from "@core/entities/creator";
+import { homeFor, safeNext } from "@shared/lib/routes";
 
 /**
  * Every way this screen can go wrong is a designed state, because at a
@@ -25,7 +27,8 @@ import { formatCountdown, useSecondsRemaining } from "./use-countdown";
  */
 export function VerifyForm() {
   const router = useRouter();
-  const challengeId = useSearchParams().get("challenge");
+  const params = useSearchParams();
+  const challengeId = params.get("challenge");
 
   const challengeQuery = useChallenge(challengeId);
   const verify = useVerifyOtp(challengeId);
@@ -92,7 +95,10 @@ export function VerifyForm() {
       onSuccess: (result) => {
         if (result.ok) {
           // Land on the wizard, which resumes from the creator record.
-          router.replace("/onboarding");
+          router.replace(
+            safeNext(params.get("next")) ??
+              homeFor(creatorDestination(result.creator))
+          );
           return;
         }
         setFailure(result.failure);
@@ -107,7 +113,8 @@ export function VerifyForm() {
       subtitle={
         challenge ? (
           <>
-            We sent six digits to <span className="font-medium text-body">{challenge.phoneMasked}</span> on WhatsApp.
+            We sent six digits to the email on your account, for{" "}
+            <span className="font-medium text-body">{challenge.phoneMasked}</span>.
           </>
         ) : undefined
       }

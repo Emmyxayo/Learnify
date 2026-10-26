@@ -28,6 +28,7 @@
    ============================================================ */
 
 import { ONBOARDING_STEPS, type OnboardingStep } from "@core/entities/creator";
+import type { SettingsSection } from "@core/entities/settings";
 
 const usingApi = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") === "api";
 
@@ -126,3 +127,19 @@ export const AVAILABLE_ONBOARDING_STEPS: readonly OnboardingStep[] =
     if (step === "whatsapp") return FEATURES.whatsappDelivery;
     return true;
   });
+
+/**
+ * Whether a settings section exists in this build.
+ *
+ * Lives here rather than in the settings screen because the route
+ * needs it too, and that screen is a client component — a server
+ * component calling into it fails at render, which is how this was
+ * caught. One rule, both callers, so a hidden nav link and a closed
+ * URL cannot disagree.
+ */
+export function isSectionAvailable(s: SettingsSection): boolean {
+  if (s === "subscription") return FEATURES.plans;
+  if (s === "payments") return FEATURES.payments;
+  if (s === "whatsapp") return FEATURES.whatsappDelivery;
+  return true;
+}

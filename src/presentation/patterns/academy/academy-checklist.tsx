@@ -7,6 +7,7 @@ import { cn } from "@shared/lib/cn";
 import { useActiveAcademySlug, useOnboarding } from "@app-layer/academy/queries";
 import { blockingSteps } from "@core/entities/academy";
 import { settingsPath } from "@core/entities/settings";
+import { FEATURES } from "@shared/lib/features";
 
 /**
  * What the backend is waiting for before this academy can publish.
@@ -24,12 +25,23 @@ import { settingsPath } from "@core/entities/settings";
  * no is a dead end with a tick box.
  */
 
-/** Where each of the backend's step keys actually gets done. */
+/**
+ * Where each of the backend's step keys actually gets done.
+ *
+ * `payouts` has no entry when payments are off: that settings
+ * section is hidden on this build, so a "Connect" link would send a
+ * creator to a page that is not there. The step still shows — the
+ * server lists it and it is honest to say it exists — but as
+ * something that cannot be done yet rather than a dead link. It is
+ * non-blocking, so nothing waits on it.
+ */
 const FIX: Record<string, { href: string; label: string }> = {
   profile: { href: settingsPath("branding"), label: "Add details" },
   branding: { href: settingsPath("branding"), label: "Upload a logo" },
   contact: { href: settingsPath("branding"), label: "Add contact" },
-  payouts: { href: settingsPath("payments"), label: "Connect" },
+  ...(FEATURES.payments
+    ? { payouts: { href: settingsPath("payments"), label: "Connect" } }
+    : {}),
 };
 
 export function AcademyChecklist({ className }: { className?: string }) {
@@ -83,7 +95,9 @@ export function AcademyChecklist({ className }: { className?: string }) {
                 </p>
                 {!step.done && !step.blocking && (
                   <p className="mt-0.5 text-sm text-muted">
-                    Optional — your courses can go live without it.
+                    {FIX[step.key]
+                      ? "Optional — your courses can go live without it."
+                      : "Not available yet. Your courses can go live without it."}
                   </p>
                 )}
               </div>

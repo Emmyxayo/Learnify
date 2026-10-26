@@ -246,6 +246,18 @@ export const CreatorSchema = z.object({
   /* Secondary: receipts and recovery. Never the login. */
   email: z.string().email().nullable(),
   emailVerifiedAt: z.string().nullable(),
+
+  /**
+   * Enrolled in somebody's course rather than running their own.
+   *
+   * Defaulted so fixtures predating it still parse. The backend has
+   * said this on every /auth/me/ since the start and nothing read
+   * it — so a student who signed in looked exactly like a creator
+   * who had not made an academy yet, and got sent to "Name your
+   * academy". Someone who had just bought a course on poultry
+   * farming was asked to start a business.
+   */
+  isStudent: z.boolean().default(false),
   /* Set when a Google account is linked. Cannot exist without a verified phone. */
   googleEmail: z.string().email().nullable(),
 
@@ -502,7 +514,9 @@ export type CreatorDestination =
   /** Must finish this step before the studio means anything. */
   | { area: "setup"; step: OnboardingStep }
   /** Free to use the product, blockers or not. */
-  | { area: "studio" };
+  | { area: "studio" }
+  /** Not a creator at all. Their courses, not their academy. */
+  | { area: "student" };
 
 /**
  * Whether the account has been confirmed at all — by either channel.
@@ -532,6 +546,12 @@ export const isAccountVerified = (c: Creator) =>
 
 export function creatorDestination(c: Creator): CreatorDestination {
   if (!isAccountVerified(c)) return { area: "auth" };
+
+  /* Before the no-academy check, and only when there is no academy:
+     somebody can be both, and a creator who also bought a course
+     still belongs in their studio. */
+  if (c.isStudent && c.subdomain.value === null) return { area: "student" };
+
   if (c.subdomain.value === null) return { area: "academy" };
   if (c.profile === null) return { area: "setup", step: "profile" };
   return { area: "studio" };

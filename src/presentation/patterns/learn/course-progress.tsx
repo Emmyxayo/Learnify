@@ -14,6 +14,7 @@ import {
 } from "@core/entities/learning";
 import type { Release } from "@core/entities/release";
 import { cn } from "@shared/lib/cn";
+import { isUnauthorized } from "@shared/lib/errors";
 
 /**
  * One course, lesson by lesson.
@@ -24,9 +25,34 @@ import { cn } from "@shared/lib/cn";
  * gives them no sense of what is coming.
  */
 export function CourseProgress({ enrolmentId }: { enrolmentId: string }) {
-  const { data, isPending, isError, refetch } = useLearnerEnrolment(enrolmentId);
+  const { data, isPending, isError, error, refetch } = useLearnerEnrolment(enrolmentId);
 
   if (isPending) return <Skeleton />;
+
+  /* The link a student follows straight from enrolling lands here
+     with no session. That is a sign-in, not a failure — and `next`
+     brings them back to this exact course once they have one. */
+  if (isError && isUnauthorized(error)) {
+    return (
+      <Wrap>
+        <StatusBanner
+          tone="info"
+          title="Sign in to open this course"
+          action={
+            <Link
+              href={`/sign-in?next=${encodeURIComponent(`/learn/${enrolmentId}`)}`}
+              className="text-sm font-semibold text-brand hover:underline"
+            >
+              Sign in
+            </Link>
+          }
+        >
+          We will send a code to the number you enrolled with. There is no
+          password to remember.
+        </StatusBanner>
+      </Wrap>
+    );
+  }
 
   if (isError || !data) {
     return (

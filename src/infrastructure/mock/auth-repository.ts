@@ -68,6 +68,7 @@ function createCreator(phone: string, fullName: string, email: string | null): C
     fullName,
     phone,
     phoneVerifiedAt: now,
+    isStudent: false,
     email,
     emailVerifiedAt: null,
     googleEmail: null,

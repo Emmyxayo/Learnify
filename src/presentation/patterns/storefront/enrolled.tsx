@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { CheckCircle2, MessageCircle } from "lucide-react";
+import { BookOpen, CheckCircle2, MessageCircle } from "lucide-react";
 import type { Course } from "@core/entities/course";
 import type { Storefront } from "@core/entities/storefront";
 import type { Enrolment } from "@core/entities/student";
 import { lessonCount } from "@core/entities/course";
 import { scheduleOutcome } from "@core/value-objects/schedule";
-import { whatsappLink, formatNgDisplay } from "@core/value-objects/phone";
+import { formatNgDisplay, whatsappLink } from "@core/value-objects/phone";
 import { formatDate, formatTime } from "@shared/lib/format";
 import { buttonClasses } from "@ui/ui/button";
 
@@ -56,8 +56,8 @@ export function Enrolled({
       </h1>
       <p className="mt-2 text-body">
         {alreadyHeld
-          ? `${course.title} is already going to ${formatNgDisplay(enrolment.student.phone)}.`
-          : `${course.title} is on its way to ${formatNgDisplay(enrolment.student.phone)}.`}
+          ? `You are already enrolled in ${course.title}.`
+          : `You are enrolled in ${course.title}.`}
       </p>
 
       <div className="mt-6 rounded-card border border-border bg-surface-raised p-4 text-left">
@@ -66,7 +66,7 @@ export function Enrolled({
         </h2>
         <p className="mt-1 text-body">
           {immediate
-            ? "All of them. Check WhatsApp — the first message is already there."
+            ? "All of them. Open the first one below and start whenever you like."
             : outcome
               ? `Arrives ${arrivalPhrase(outcome.firstLessonAt)}.`
               : "Arrives as soon as your creator sends it."}
@@ -78,10 +78,32 @@ export function Enrolled({
         )}
       </div>
 
+      {/* Enrolling creates an account but mints no session — the
+          backend returns an enrolment, not tokens. So the way in is
+          a one-time code to the number they just enrolled with,
+          which is the same door they will use every time after
+          this. Linking straight at /learn would 401 them on the
+          first tap, right after they handed over money. */}
+      <Link
+        href={`/sign-in?next=${encodeURIComponent(`/learn/${enrolment.id}`)}`}
+        className={buttonClasses({ size: "lg", className: "mt-5 w-full" })}
+      >
+        <BookOpen className="size-4" aria-hidden />
+        {immediate ? "Start the course" : "Open your course"}
+      </Link>
+      <p className="mt-2 text-sm text-muted">
+        We will text a code to {formatNgDisplay(enrolment.student.phone)}. No
+        password to set up.
+      </p>
+
       {chat && (
         <a
           href={chat}
-          className={buttonClasses({ size: "lg", className: "mt-4 w-full" })}
+          className={buttonClasses({
+            size: "lg",
+            variant: "secondary",
+            className: "mt-3 w-full",
+          })}
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -91,8 +113,8 @@ export function Enrolled({
       )}
 
       <p className="mt-4 text-sm text-muted">
-        Nothing to install and no password to remember. Keep this number in your phone and
-        the lessons will find you.
+        Nothing to install and no password to remember. Bookmark this page — your lessons
+        open here as they unlock.
       </p>
 
       <Link

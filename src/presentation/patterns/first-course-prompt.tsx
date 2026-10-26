@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookPlus } from "lucide-react";
 import { buttonClasses } from "@ui/ui/button";
+import { DELIVERY } from "@shared/lib/delivery";
 
 /**
  * What a brand-new creator sees instead of four zeros.
@@ -29,8 +30,8 @@ export function FirstCoursePrompt({ variant }: { variant: "none" | "unpublished"
 
       <p className="prose-measure mx-auto mt-2 text-body">
         {finishing
-          ? "You have a course started but nothing live yet. Publish it and your students start receiving lessons on WhatsApp."
-          : "Upload what you already teach and Learnify turns it into lessons, then delivers them to your students on WhatsApp, one day at a time."}
+          ? DELIVERY.unpublished
+          : DELIVERY.emptyStudio}
       </p>
 
       <Link

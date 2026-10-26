@@ -15,7 +15,7 @@ import { SectionWhatsApp } from "./section-whatsapp";
 import { SectionPayments } from "./section-payments";
 import { SectionSubscription } from "./section-subscription";
 import { SectionAccount } from "./section-account";
-import { FEATURES } from "@shared/lib/features";
+import { isSectionAvailable } from "@shared/lib/features";
 
 /**
  * Settings, as routes.
@@ -71,12 +71,7 @@ export function SettingsScreen({ section }: { section: SettingsSection }) {
  * screen, because it looks like it worked.
  */
 const visibleSections = (): readonly SettingsSection[] =>
-  SETTINGS_SECTIONS.filter((s) => {
-    if (s === "subscription") return FEATURES.plans;
-    if (s === "payments") return FEATURES.payments;
-    if (s === "whatsapp") return FEATURES.whatsappDelivery;
-    return true;
-  });
+  SETTINGS_SECTIONS.filter(isSectionAvailable);
 
 function SectionNav({ current }: { current: SettingsSection }) {
   return (

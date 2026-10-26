@@ -8,6 +8,7 @@ import { Button } from "@ui/ui/button";
 import { useMyLearning } from "@app-layer/learn/queries";
 import { percentComplete, type LearnerEnrolment } from "@core/entities/learning";
 import { formatRelativeTime } from "@shared/lib/format";
+import { isUnauthorized } from "@shared/lib/errors";
 
 /**
  * Everything this person is taking.
@@ -17,9 +18,35 @@ import { formatRelativeTime } from "@shared/lib/format";
  * "what have I done".
  */
 export function MyLearning() {
-  const { data, isPending, isError, refetch } = useMyLearning();
+  const { data, isPending, isError, error, refetch } = useMyLearning();
 
   if (isPending) return <Skeleton />;
+
+  /* Not signed in is not a failure. A student arrives here straight
+     from enrolling, with an account the backend made for them and no
+     session yet — the way in is a code to the number they enrolled
+     with, not a retry button. */
+  if (isError && isUnauthorized(error)) {
+    return (
+      <Wrap>
+        <StatusBanner
+          tone="info"
+          title="Sign in to open your courses"
+          action={
+            <Link
+              href={`/sign-in?next=${encodeURIComponent("/learn")}`}
+              className="text-sm font-semibold text-brand hover:underline"
+            >
+              Sign in
+            </Link>
+          }
+        >
+          We will send a code to the number you enrolled with. There is no
+          password to remember.
+        </StatusBanner>
+      </Wrap>
+    );
+  }
 
   if (isError) {
     return (

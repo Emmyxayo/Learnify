@@ -16,9 +16,10 @@ import {
 } from "@app-layer/auth/queries";
 import type { VerificationChannel } from "@core/ports";
 import { allShownInline, fieldError } from "@shared/lib/field-errors";
-import { CREATE_ACADEMY, DASHBOARD } from "@shared/lib/routes";
+import { CREATE_ACADEMY, homeFor } from "@shared/lib/routes";
 import { AuthCard } from "./auth-card";
 import { VerifyAccount } from "./verify-account";
+import { creatorDestination } from "@core/entities/creator";
 
 /**
  * The password door.
@@ -116,7 +117,10 @@ export function PasswordSignInForm() {
     }
 
     setPending(null);
-    router.push(result.auth.isNewCreator ? CREATE_ACADEMY : DASHBOARD);
+    /* Not isNewCreator — that only knows "has an academy or not" and
+       answers "Name your academy" for a student who has just bought
+       a course. homeFor reads the whole destination. */
+    router.push(homeFor(creatorDestination(result.auth.creator)));
   }
 
   async function submit(e: React.FormEvent) {

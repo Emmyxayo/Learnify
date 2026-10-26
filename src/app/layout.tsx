@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { DELIVERY } from "@shared/lib/delivery";
 
 /**
  * One family, weight contrast doing the work. The prototype's headlines
@@ -14,10 +15,17 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+/**
+ * The default title and og:description for every page — which is what
+ * a WhatsApp group sees when a creator pastes a course link.
+ *
+ * Keyed to the delivery channel rather than hardcoded. It promised
+ * WhatsApp delivery on a build that has none, in the one place the
+ * promise reaches a student before they have read anything else.
+ */
 export const metadata: Metadata = {
-  title: "Learnify — Teach on WhatsApp",
-  description:
-    "Build a course, sell it, and deliver it on WhatsApp. No app for your students to download.",
+  title: DELIVERY.siteTitle,
+  description: DELIVERY.siteDescription,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

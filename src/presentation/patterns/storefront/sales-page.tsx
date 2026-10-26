@@ -11,6 +11,7 @@ import { buttonClasses } from "@ui/ui/button";
 import { WhatsAppPreview } from "@ui/patterns/whatsapp-preview";
 import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
+import { DELIVERY } from "@shared/lib/delivery";
 
 const LEVEL_LABELS = {
   beginner: "Beginner",
@@ -186,7 +187,7 @@ export function StorefrontOffer({
         </span>
       )}
       <p className="mt-2 text-center text-xs text-muted">
-        Lessons arrive on WhatsApp. Nothing to download.
+        {DELIVERY.reassurance}
       </p>
     </div>
   );
@@ -252,8 +253,7 @@ function Delivery({
         How the lessons reach you
       </h2>
       <p className="mt-1.5 text-sm leading-relaxed text-on-deep-muted">
-        {describeSchedule(course.schedule)}, straight to WhatsApp. No app, no login, no
-        password — it arrives like a message from a friend.
+        {DELIVERY.howItWorks(describeSchedule(course.schedule))}
       </p>
 
       {sample && (

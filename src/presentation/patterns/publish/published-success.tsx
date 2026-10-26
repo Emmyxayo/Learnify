@@ -6,6 +6,7 @@ import { Check, Copy, ExternalLink, MessageCircle } from "lucide-react";
 import { Button, buttonClasses } from "@ui/ui/button";
 import { DeepPanel } from "@ui/ui/card";
 import type { Course } from "@core/entities/course";
+import { DELIVERY } from "@shared/lib/delivery";
 
 /**
  * The end of the whole builder, and the only part of it a student
@@ -53,7 +54,7 @@ export function PublishedSuccess({ course, url }: { course: Course; url: string 
         </span>
         <h1 className="mt-4 text-heading text-ink sm:text-title">{course.title} is live</h1>
         <p className="prose-measure mx-auto mt-1.5 text-body">
-          Anyone with the link can join. Lessons start arriving on WhatsApp as soon as they do.
+          {DELIVERY.afterPublish}
         </p>
       </header>
 

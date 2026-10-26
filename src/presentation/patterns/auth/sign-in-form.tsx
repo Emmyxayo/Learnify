@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@ui/ui/button";
 import { Field } from "@ui/ui/field";
@@ -11,9 +11,14 @@ import { StatusBanner } from "@ui/ui/status-banner";
 import { useGoogleSignIn, useRequestOtp } from "@app-layer/auth/queries";
 import { FEATURES } from "@shared/lib/features";
 import { AuthCard, GoogleMark } from "./auth-card";
+import { creatorDestination } from "@core/entities/creator";
+import { homeFor, safeNext } from "@shared/lib/routes";
 
 export function SignInForm() {
   const router = useRouter();
+  /* Where the caller wanted to end up — the enrolled screen sends a
+     student straight at the course they just bought. */
+  const next = safeNext(useSearchParams().get("next"));
   const requestOtp = useRequestOtp();
   const google = useGoogleSignIn();
 
@@ -37,7 +42,13 @@ export function SignInForm() {
 
     requestOtp.mutate(
       { phone: phoneE164, purpose: "sign-in" },
-      { onSuccess: (challenge) => router.push(`/confirm?challenge=${challenge.id}`) }
+      {
+        onSuccess: (challenge) =>
+          router.push(
+            `/confirm?challenge=${challenge.id}` +
+              (next ? `&next=${encodeURIComponent(next)}` : "")
+          ),
+      }
     );
   }
 
@@ -45,7 +56,8 @@ export function SignInForm() {
     if (busy) return;
     google.mutate(undefined, {
       onSuccess: (result) => {
-        if (result.ok) router.replace("/onboarding");
+        if (result.ok)
+          router.replace(next ?? homeFor(creatorDestination(result.creator)));
       },
     });
   }

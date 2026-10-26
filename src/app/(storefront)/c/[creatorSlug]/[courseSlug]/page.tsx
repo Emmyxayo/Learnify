@@ -5,6 +5,7 @@ import { SalesPage } from "@ui/patterns/storefront/sales-page";
 import { coursePath, publicCourseUrl } from "@shared/lib/site";
 import { formatNaira } from "@shared/lib/format";
 import { isFree } from "@core/value-objects/money";
+import { DELIVERY } from "@shared/lib/delivery";
 
 type Params = Promise<{ creatorSlug: string; courseSlug: string }>;
 
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   return {
     title: `${course.title} — ${storefront.academyName}`,
-    description: `${course.subtitle} ${price}. Delivered on WhatsApp.`,
+    description: `${course.subtitle} ${price}. ${DELIVERY.linkPreview}`,
     alternates: { canonical },
     openGraph: {
       type: "website",

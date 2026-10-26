@@ -361,7 +361,7 @@ function Pending({
         title="We're still confirming your payment"
         sub={`Your bank is taking longer than usual. We have your number — ${formatNgDisplay(
           outcome.details.phone
-        )} — and your first lesson will arrive on WhatsApp as soon as the payment clears.`}
+        )} — and your course opens as soon as the payment clears.`}
       >
         <p className="mt-4 text-sm text-muted">
           You can close this page. Nothing else is needed from you.
