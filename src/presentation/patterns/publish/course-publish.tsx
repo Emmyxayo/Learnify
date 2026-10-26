@@ -16,6 +16,8 @@ import type { Money } from "@core/value-objects/money";
 import { ScheduleSection } from "./schedule-section";
 import { PricingSection } from "./pricing-section";
 import { PreflightList } from "./preflight-list";
+import { CourseDetailsSection } from "./course-details-section";
+import { AcademyChecklist } from "@ui/patterns/academy/academy-checklist";
 import { usePublishBlockers } from "@app-layer/course/queries";
 import { PublishedSuccess } from "./published-success";
 import { publicCourseUrl } from "@shared/lib/site";
@@ -144,6 +146,8 @@ export function CoursePublish({ courseId }: { courseId: string }) {
         onChange={changePricing}
       />
 
+      <CourseDetailsSection course={course} />
+
       <Card className="p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-ink">Before it goes live</h2>
         <PreflightList items={items} courseId={course.id} onJumpToSection={jumpTo} />
@@ -165,6 +169,12 @@ export function CoursePublish({ courseId }: { courseId: string }) {
             </ul>
           </StatusBanner>
         )}
+
+        {/* One of the server's blockers is "Finish your academy
+            onboarding first", which says nothing about what is left.
+            This is that list, with a route to each field. It renders
+            nothing once the academy is complete. */}
+        <AcademyChecklist className="mt-3" />
 
         {publish.isError && (
           <StatusBanner tone="danger" className="mt-3" title="Could not publish">

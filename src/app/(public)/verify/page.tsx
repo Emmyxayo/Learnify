@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { FEATURES } from "@shared/lib/features";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { normalizeVerificationCode } from "@core/entities/certificate";
@@ -24,6 +26,10 @@ export default async function Page({
 }: {
   searchParams: Promise<{ code?: string }>;
 }) {
+  /* certificates has no endpoints on this backend, so the screen is
+     not shown rather than shown and then broken. */
+  if (!FEATURES.certificates) notFound();
+
   const { code } = await searchParams;
 
   /* Submitting lands on the shareable URL rather than a query string,

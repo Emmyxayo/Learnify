@@ -12,6 +12,7 @@ import { formatCount, formatNaira } from "@shared/lib/format";
 import { hasNoCourses, hasUnpublishedWorkOnly, type DashboardSummary } from "@core/entities/dashboard";
 import { FirstCoursePrompt } from "../first-course-prompt";
 import { RecentEnrolments } from "./recent-enrolments";
+import { AcademyChecklist } from "@ui/patterns/academy/academy-checklist";
 
 export function CreatorDashboard() {
   const { creator } = useSession();
@@ -25,6 +26,12 @@ export function CreatorDashboard() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <h1 className="text-heading text-ink sm:text-title">Dashboard</h1>
+
+      {/* The server's own list of what is blocking publishing. Above
+          the numbers on purpose: a creator whose courses cannot go
+          live needs that before they need a revenue figure. It
+          renders nothing once the academy is complete. */}
+      <AcademyChecklist />
 
       {loading && <DashboardSkeleton />}
 

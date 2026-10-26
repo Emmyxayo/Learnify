@@ -1,74 +1,50 @@
 import type { CertificateRepository } from "@core/ports";
-import {
-  CertificateSchema,
-  CertificateTemplateSchema,
-  normalizeVerificationCode,
-  type Certificate,
-  type VerificationResult,
-} from "@core/entities/certificate";
-import { request } from "./http-client";
-import { z } from "zod";
+import { ApiError } from "./http-client";
 
-const parseOne = (data: unknown): Certificate => CertificateSchema.parse(data);
-const parseMany = (data: unknown): Certificate[] => z.array(CertificateSchema).parse(data);
-
-/** The union is the contract; parsing it here keeps a drifting backend loud. */
-const VerificationResultSchema = z.discriminatedUnion("outcome", [
-  z.object({ outcome: z.literal("not-found"), code: z.string() }),
-  z.object({ outcome: z.literal("valid"), certificate: CertificateSchema }),
-  z.object({ outcome: z.literal("revoked"), certificate: CertificateSchema }),
-  z.object({
-    outcome: z.literal("superseded"),
-    certificate: CertificateSchema,
-    current: CertificateSchema.nullable(),
-  }),
-]);
+/**
+ * Certificates, which this backend does not have.
+ *
+ * Every method here used to call `/creators/{id}/certificates` and friends — paths
+ * from the original contract that do not exist, without even the
+ * `/api/v1` prefix every live call carries. Written before the
+ * migration and never revisited, so a 404 was the best case and a
+ * silently empty list the worst.
+ *
+ * FEATURES.certificates is off against the API, so nothing should
+ * reach this. Throwing rather than returning empty is what makes
+ * that true rather than hoped-for: a screen that slips past the
+ * flag says it cannot do this yet instead of showing a creator an
+ * empty list and letting them conclude they have none.
+ */
+function notAvailable(what: string): never {
+  throw new ApiError(
+    501,
+    `${what} is not available yet — the backend has no endpoint for it.`
+  );
+}
 
 export const httpCertificateRepository: CertificateRepository = {
-  async listIssued(creatorId, filters = {}) {
-    const qs = new URLSearchParams();
-    if (filters.courseId) qs.set("courseId", filters.courseId);
-    return parseMany(await request(`/creators/${creatorId}/certificates?${qs}`));
+  async listIssued(_creatorId, _filters = {}) {
+    notAvailable("Certificates");
   },
 
-  async getTemplate(creatorId) {
-    return CertificateTemplateSchema.parse(
-      await request(`/creators/${creatorId}/certificate-template`)
-    );
+  async getTemplate(_creatorId) {
+    notAvailable("Certificate templates");
   },
 
-  async saveTemplate(creatorId, template) {
-    return CertificateTemplateSchema.parse(
-      await request(`/creators/${creatorId}/certificate-template`, {
-        method: "PUT",
-        body: JSON.stringify(template),
-      })
-    );
+  async saveTemplate(_creatorId, _template) {
+    notAvailable("Certificate templates");
   },
 
-  async uploadBackground(file) {
-    const body = new FormData();
-    body.append("file", file);
-    const data = await request<{ url: string; fileName: string }>(`/uploads/certificate-background`, {
-      method: "POST",
-      body,
-      /* Let the browser set the multipart boundary. */
-      headers: {},
-    });
-    return data;
+  async uploadBackground(_file) {
+    notAvailable("Certificate backgrounds");
   },
 
-  async reissue(certificateId, input) {
-    const data = await request<{ superseded: unknown; replacement: unknown }>(
-      `/certificates/${certificateId}/reissue`,
-      { method: "POST", body: JSON.stringify(input) }
-    );
-    return { superseded: parseOne(data.superseded), replacement: parseOne(data.replacement) };
+  async reissue(_certificateId, _input) {
+    notAvailable("Reissuing a certificate");
   },
 
-  async verify(code): Promise<VerificationResult> {
-    return VerificationResultSchema.parse(
-      await request(`/verify/${encodeURIComponent(normalizeVerificationCode(code))}`)
-    );
-  },
+  async verify(_code) {
+    notAvailable("Certificate verification");
+  }
 };

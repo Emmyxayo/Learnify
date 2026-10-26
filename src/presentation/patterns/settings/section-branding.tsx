@@ -15,7 +15,6 @@ import { Field } from "@ui/ui/field";
 import { Input } from "@ui/ui/input";
 import { Spinner } from "@ui/ui/spinner";
 import { StatusBanner } from "@ui/ui/status-banner";
-import { StepProfile } from "@ui/patterns/onboarding/step-profile";
 import { StepSubdomain } from "@ui/patterns/onboarding/step-subdomain";
 import { SavedNote } from "@ui/patterns/onboarding/step-chrome";
 import {
@@ -23,6 +22,7 @@ import {
   StorefrontOffer,
 } from "@ui/patterns/storefront/sales-page";
 import { SettingsCard } from "./settings-screen";
+import { AcademyDetails } from "./academy-details";
 import { cn } from "@shared/lib/cn";
 
 /** WCAG AA for normal text. Below this a button label is not readable. */
@@ -67,12 +67,11 @@ export function SectionBranding({ creator }: { creator: Creator }) {
 
   return (
     <div className="space-y-4">
-      <SettingsCard
-        title="Your academy"
-        description="The name, subject and description students read on every course page."
-      >
-        <StepProfile creator={creator} />
-      </SettingsCard>
+      {/* The academy record itself. Replaces the onboarding profile
+          step that used to sit here: that one wrote a name and a
+          tagline, and the backend also wants a description and a way
+          to reach you before it will publish anything. */}
+      <AcademyDetails />
 
       <SettingsCard
         title="Look"

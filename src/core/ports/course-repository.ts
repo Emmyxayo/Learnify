@@ -101,6 +101,16 @@ export interface CourseRepository {
   attachAsset(courseId: string, lessonId: string, file: File): Promise<Course>;
 
   /**
+   * The picture on the sales page and the WhatsApp link preview.
+   *
+   * Its own method rather than a field on update() because it is a
+   * file: it goes as multipart, and the JSON patch everything else
+   * uses cannot carry one. The backend blocks publishing without it,
+   * so this is not decoration.
+   */
+  setCover(courseId: string, file: File): Promise<Course>;
+
+  /**
    * What stands between this course and being published, in the
    * backend's own words.
    *

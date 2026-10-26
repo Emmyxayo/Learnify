@@ -454,6 +454,13 @@ export const mockCourseRepository: CourseRepository = {
     return this.update(courseId, { modules });
   },
 
+  async setCover(courseId, file) {
+    /* An object URL, which is a real URL the browser can render for
+       as long as this tab lives. Good enough for a fixture run and
+       honest about being local. */
+    return this.update(courseId, { coverImageUrl: URL.createObjectURL(file) });
+  },
+
   async attachAsset(courseId, lessonId, file) {
     const course = requireCourse(courseId);
     const kind = file.type.startsWith("image/")

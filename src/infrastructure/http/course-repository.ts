@@ -246,6 +246,17 @@ export const httpCourseRepository: CourseRepository = {
     return toCourse(updated);
   },
 
+  /* PATCH as multipart. The course endpoint accepts form data as
+     well as JSON — see its reqTypes in the schema — so the cover
+     rides the same route the rest of the course does. */
+  async setCover(courseId, file) {
+    const form = new FormData();
+    form.append("cover", file);
+
+    await request(detail(courseId), { method: "PATCH", form });
+    return reread(courseId);
+  },
+
   async attachAsset(courseId, lessonId, file) {
     const form = new FormData();
     form.append("file", file);

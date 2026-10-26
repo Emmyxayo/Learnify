@@ -201,3 +201,25 @@ export function useUnpublishCourse() {
     },
   });
 }
+
+/**
+ * The cover image.
+ *
+ * Separate from useUpdateCourse because it carries a file and
+ * therefore cannot be optimistic — there is nothing to show until
+ * the upload returns a URL the browser can fetch. The publish-check
+ * is invalidated too: a missing cover is one of the things the
+ * backend refuses to publish without, and the checklist should tick
+ * itself the moment it lands.
+ */
+export function useSetCourseCover(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => repositories.courses.setCover(id, file),
+    onSuccess: (course) => {
+      qc.setQueryData(courseKeys.detail(id), course);
+      qc.invalidateQueries({ queryKey: [...courseKeys.detail(id), "publish-check"] });
+      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+    },
+  });
+}

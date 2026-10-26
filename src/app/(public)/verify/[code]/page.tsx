@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { FEATURES } from "@shared/lib/features";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BadgeCheck, CircleSlash, FileQuestion, RefreshCw } from "lucide-react";
@@ -32,6 +34,10 @@ export async function generateMetadata({
  * it — the verdict is in the HTML of the first response.
  */
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
+  /* certificates has no endpoints on this backend, so the screen is
+     not shown rather than shown and then broken. */
+  if (!FEATURES.certificates) notFound();
+
   const { code } = await params;
   const result = await verifyCertificate(code);
 
