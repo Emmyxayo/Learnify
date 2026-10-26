@@ -73,7 +73,9 @@ export function Enrolled({
               ? `Arrives ${arrivalPhrase(outcome.firstLessonAt)}.`
               : "Arrives as soon as your creator sends it."}
         </p>
-        {outcome && !immediate && (
+        {/* Only when there is in fact more. A one-lesson course was
+            being told "Then 0 more over 1 week." */}
+        {outcome && !immediate && outcome.lessons > 1 && (
           <p className="mt-1.5 text-sm text-muted">
             Then {outcome.lessons - 1} more over {outcome.runLabel.replace(/^about /, "about ")}.
           </p>

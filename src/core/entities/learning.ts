@@ -95,15 +95,46 @@ export const unlocked = (lessons: Release[]) =>
 export { releaseCounts };
 
 /**
+ * The reasons the backend sends, in words a student can read.
+ *
+ * `locked_reason` arrives as a machine token — "enrollment_inactive"
+ * — not as a sentence. This was rendered verbatim, so a student who
+ * finished a course got the literal string `enrollment_inactive`
+ * sitting under the lesson they had just completed.
+ *
+ * Anything not in this map falls through to the date wording below
+ * rather than being printed, because an unrecognised token is still
+ * a token and showing one is never the better of the two options.
+ */
+const LOCKED_REASONS: Record<string, string> = {
+  enrollment_inactive: "Your place on this course has ended",
+  enrolment_inactive: "Your place on this course has ended",
+  course_unpublished: "Your teacher has taken this course offline",
+  previous_incomplete: "Finish the lesson before this one first",
+  sequential_locked: "Finish the lesson before this one first",
+};
+
+/** Lower snake_case with no spaces is a code, not a sentence. */
+const looksLikeCode = (s: string) => /^[a-z0-9]+(_[a-z0-9]+)+$/.test(s.trim());
+
+/**
  * What to say about a lesson that has not opened yet.
  *
- * The backend sends its own reason, which is used verbatim when it
- * has one — it knows whether this is waiting on a date or on the
- * lesson before it, and guessing between those is how a student gets
- * told the wrong thing.
+ * The backend knows things this cannot — whether a lesson waits on a
+ * date or on the one before it — so its reason wins where it is
+ * understood. Where it is not, the date is something true that can
+ * be worked out here.
  */
 export function lockedLabel(lesson: Release, now: Date = new Date()): string {
-  if (lesson.lockedReason) return lesson.lockedReason;
+  const reason = lesson.lockedReason.trim();
+
+  if (reason) {
+    const known = LOCKED_REASONS[reason.toLowerCase()];
+    if (known) return known;
+    // A sentence from the backend is still better than a guess; a
+    // bare token is not.
+    if (!looksLikeCode(reason)) return reason;
+  }
 
   const at = new Date(lesson.releaseAt);
   if (at.getTime() <= now.getTime()) return "Opening shortly";

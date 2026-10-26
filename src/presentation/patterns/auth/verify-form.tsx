@@ -16,7 +16,7 @@ import {
 import { AuthCard } from "./auth-card";
 import { formatCountdown, useSecondsRemaining } from "./use-countdown";
 import { creatorDestination } from "@core/entities/creator";
-import { homeFor, safeNext } from "@shared/lib/routes";
+import { homeFor, safeNext, SIGN_IN_WITH_CODE } from "@shared/lib/routes";
 
 /**
  * Every way this screen can go wrong is a designed state, because at a
@@ -112,15 +112,25 @@ export function VerifyForm() {
       title="Enter your code"
       subtitle={
         challenge ? (
+          /* The masked value says which address or number it went to,
+             so naming the channel again in front of it produced "to
+             the email on your account, for a•••1@gmail.com." */
           <>
-            We sent six digits to the email on your account, for{" "}
+            We sent six digits to{" "}
             <span className="font-medium text-body">{challenge.sentToMasked}</span>.
           </>
         ) : undefined
       }
       footer={
-        <Link href="/sign-in" className="font-semibold text-brand hover:underline">
-          Use a different number
+        /* Not /sign-in, which forwards to the password form on a live
+           build — so the way back from a code screen was a page that
+           cannot send a code. And not "number": this takes an email
+           too, and usually is one. */
+        <Link
+          href={SIGN_IN_WITH_CODE}
+          className="font-semibold text-brand hover:underline"
+        >
+          Use a different account
         </Link>
       }
     >
