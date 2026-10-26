@@ -14,6 +14,7 @@ import { AuthCard, GoogleMark } from "./auth-card";
 import { creatorDestination } from "@core/entities/creator";
 import { homeFor, safeNext } from "@shared/lib/routes";
 import { DELIVERY } from "@shared/lib/delivery";
+import { isRateLimited } from "@shared/lib/errors";
 import { identifierKind, toIdentifier } from "@core/value-objects/identifier";
 
 export function SignInForm() {
@@ -104,11 +105,17 @@ export function SignInForm() {
       }
     >
       <div className="space-y-4">
-        {requestOtp.isError && (
-          <StatusBanner tone="danger" title="Could not send your code">
-            The network did not respond. Check your connection and try again.
-          </StatusBanner>
-        )}
+        {requestOtp.isError &&
+          (isRateLimited(requestOtp.error) ? (
+            <StatusBanner tone="warning" title="Too many requests">
+              Wait a minute, then ask for a code again. The last one we sent
+              may still work.
+            </StatusBanner>
+          ) : (
+            <StatusBanner tone="danger" title="Could not send your code">
+              The network did not respond. Check your connection and try again.
+            </StatusBanner>
+          ))}
 
         {google.isError && (
           <StatusBanner tone="danger" title="Google sign-in did not finish">

@@ -14,10 +14,25 @@
  * violation this avoids, and the mock throws a different class. Same
  * reasoning as fieldErrorsOf, next door.
  */
+const statusOf = (error: unknown): number | undefined =>
+  !!error && typeof error === "object"
+    ? ((error as { status?: unknown }).status as number | undefined)
+    : undefined;
+
 export function isUnauthorized(error: unknown): boolean {
-  return (
-    !!error &&
-    typeof error === "object" &&
-    (error as { status?: unknown }).status === 401
-  );
+  return statusOf(error) === 401;
+}
+
+/**
+ * Too many attempts, not a broken connection.
+ *
+ * The sign-in form answered every failed code request with "The
+ * network did not respond. Check your connection and try again."
+ * The backend rate-limits these, so the one person most likely to
+ * see that sentence is someone who has just tapped the button
+ * several times — and it tells them to tap it again, which is both
+ * untrue and the worst possible advice.
+ */
+export function isRateLimited(error: unknown): boolean {
+  return statusOf(error) === 429;
 }
