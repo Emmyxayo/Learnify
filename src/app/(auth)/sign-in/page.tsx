@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { SignInForm } from "@ui/patterns/auth/sign-in-form";
 import { FEATURES } from "@shared/lib/features";
 
@@ -17,5 +18,15 @@ export const metadata = { title: "Sign in — Learnify" };
  */
 export default function Page() {
   if (FEATURES.passwordAuth) redirect("/sign-in/password");
-  return <SignInForm />;
+
+  /* useSearchParams, for ?next=, needs a boundary so the rest of the
+     route can prerender — the same wrapper /confirm and /submissions
+     already use. Without it this page only builds in a configuration
+     where the redirect above fires first, which is why a passing api
+     build said nothing about it. */
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
+  );
 }

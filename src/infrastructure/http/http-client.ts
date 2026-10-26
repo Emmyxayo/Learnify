@@ -31,11 +31,52 @@ const PROXIED = BASE.startsWith("/");
  * under us and is invisible when it does. Going direct, the path is
  * left exactly as written.
  */
+/**
+ * Where the server sends its own requests.
+ *
+ * Deliberately not NEXT_PUBLIC_, so the var itself is never exposed
+ * to the browser — same as the proxy route, which reads it too.
+ *
+ * The fallback literal does still ship: webpack compiles
+ * `process.env.LEARNIFY_API_ORIGIN` to `undefined` for the client, so
+ * the `??` arm survives in the bundle as dead code. That costs
+ * nothing — the API host is public, it is printed in wire.ts, and the
+ * browser never reads this constant, because the branch below that
+ * uses it only runs where there is no `window`. Worth knowing before
+ * anyone puts a secret on this line.
+ */
+const SERVER_ORIGIN = (
+  process.env.LEARNIFY_API_ORIGIN ?? "https://api.learnifyng.tech"
+).replace(/\/$/, "");
+
 function resolve(path: string): string {
   if (!PROXIED) return `${BASE}${path}`;
 
   const [pathname, search] = path.split("?");
-  return `${BASE}${pathname!.replace(/\/+$/, "")}${search ? `?${search}` : ""}`;
+  const qs = search ? `?${search}` : "";
+
+  /*
+   * The server does not go through the proxy, and must not.
+   *
+   * `/api/backend` is relative, which a browser resolves against the
+   * page it is on. A server component has no page and no origin, so
+   * fetch throws `Failed to parse URL` before a request is made —
+   * and every repository catches that and reports "not found". That
+   * is what 404'd the whole public storefront: the academy page,
+   * every course sales page and the enrol form are server-rendered,
+   * so every link a creator shared led nowhere while the API served
+   * all of it perfectly.
+   *
+   * It does not need the proxy either. CORS is a rule browsers
+   * enforce on a page against its origin; there is no page here and
+   * nothing to enforce it against. So the server calls the API
+   * directly — trailing slash intact, because only the Next route
+   * needed that stripped — and the proxy stays what it was built to
+   * be: a door for the browser.
+   */
+  if (typeof window === "undefined") return `${SERVER_ORIGIN}${pathname}${qs}`;
+
+  return `${BASE}${pathname!.replace(/\/+$/, "")}${qs}`;
 }
 
 /* ------------------------------------------------------------------ *
