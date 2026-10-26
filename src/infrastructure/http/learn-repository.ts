@@ -26,11 +26,21 @@ import type { z } from "zod";
  */
 
 /**
- * The backend's `progress` is a free-form object with no declared
- * shape, so nothing can be read out of it safely. Counts come from
- * the lesson list where there is one, and from the two keys it is
- * most likely to use where there is not — falling back to zero
- * rather than guessing.
+ * The backend's `progress` is declared as a free-form object with no
+ * properties, so the keys had to be guessed and the guesses — total,
+ * lessons_total, completed, lessons_completed — were all wrong. It
+ * actually sends:
+ *
+ *   {"total_lessons": 1, "released_lessons": 1,
+ *    "completed_lessons": 1, "percent_complete": 100}
+ *
+ * Every count fell through to zero, so "My learning" showed a course
+ * the student had just finished as "0 of 0 lessons".
+ *
+ * The real keys go first and the old guesses stay behind them: this
+ * is an undeclared shape, so it can change without the schema check
+ * noticing, and the lesson list below is the one source that cannot
+ * drift — it is counted directly wherever there is one.
  */
 function countsFrom(
   progress: Record<string, unknown>,
@@ -44,8 +54,10 @@ function countsFrom(
   }
   const num = (v: unknown) => (typeof v === "number" ? v : 0);
   return {
-    total: num(progress.total ?? progress.lessons_total),
-    completed: num(progress.completed ?? progress.lessons_completed),
+    total: num(progress.total_lessons ?? progress.total ?? progress.lessons_total),
+    completed: num(
+      progress.completed_lessons ?? progress.completed ?? progress.lessons_completed
+    ),
   };
 }
 

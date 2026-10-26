@@ -302,6 +302,42 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 }
 
 /**
+ * At most one refresh in flight, however many requests want one.
+ *
+ * This backend rotates refresh tokens and blacklists the old one:
+ * refreshing with R returns a new R2 and makes R permanently
+ * invalid — a second call with R answers 401 token_not_valid.
+ *
+ * Every screen here opens several authenticated requests at once,
+ * and after a reload the access token is gone (it lives in memory by
+ * design), so they all 401 together. Each one then refreshed on its
+ * own: the first rotated the token, and every other one presented
+ * the token that rotation had just killed, got a 401, and called
+ * onAuthFailure — which clears the session. So a reload signed the
+ * person out, sometimes after appearing to work, because the render
+ * came from the one request that won the race.
+ *
+ * Coalescing fixes it. The first 401 starts the refresh, the rest
+ * await the same promise, and the rotated token is written once.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+function refreshOnce(): Promise<string | null> {
+  refreshInFlight ??= (async () => {
+    try {
+      return await refreshAccessToken!();
+    } finally {
+      /* Cleared as this settles, so a later 401 — an access token
+         that has genuinely aged out — starts a fresh refresh rather
+         than being handed this one's stale answer. */
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+/**
  * One request, with a single refresh retry on 401.
  *
  * Exactly one: a refresh that itself returns 401 means the refresh
@@ -315,7 +351,7 @@ export async function request<T>(
   let res = await send(path, options);
 
   if (res.status === 401 && !options.anonymous && refreshAccessToken) {
-    const fresh = await refreshAccessToken();
+    const fresh = await refreshOnce();
     if (fresh) {
       accessToken = fresh;
       res = await send(path, options);

@@ -129,6 +129,23 @@ function LessonRow({
   enrolmentId: string;
   lesson: Release;
 }) {
+  /*
+   * A lesson you have finished stays open.
+   *
+   * This read `available` alone, and the backend drops that to false
+   * for every lesson once an enrolment completes — so finishing a
+   * course locked the whole thing behind you. The last lesson was
+   * listed as done by its tick and "Your place on this course has
+   * ended" by its label, in the same row, and nothing could be
+   * opened again.
+   *
+   * Completion does not expire. `available` answers whether a lesson
+   * has released yet, and one already read plainly has. If the
+   * backend does refuse it, getLesson returns null and the reader
+   * shows the lock — the wrong guess costs a tap, not a dead row.
+   */
+  const openable = lesson.available || lesson.completed;
+
   const content = (
     <div className="flex items-start gap-3 px-4 py-3">
       <Marker lesson={lesson} />
@@ -136,13 +153,13 @@ function LessonRow({
         <p
           className={cn(
             "text-sm font-medium",
-            lesson.available ? "text-ink" : "text-muted"
+            openable ? "text-ink" : "text-muted"
           )}
         >
           {lesson.title}
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          {lesson.available
+          {openable
             ? `${lesson.estimatedMinutes} min${lesson.completed ? " · done" : ""}`
             : lockedLabel(lesson)}
         </p>
@@ -152,7 +169,7 @@ function LessonRow({
 
   // A locked row is not a link. Rendering one that goes nowhere is
   // worse than rendering none — it invites the tap and then refuses.
-  if (!lesson.available) return <div aria-disabled>{content}</div>;
+  if (!openable) return <div aria-disabled>{content}</div>;
 
   return (
     <Link
