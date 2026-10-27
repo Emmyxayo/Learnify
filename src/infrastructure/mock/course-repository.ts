@@ -270,6 +270,9 @@ export const mockCourseRepository: CourseRepository = {
 
   async create(input: CreateCourseInput) {
     const course: Course = {
+      /* The mock always has its modules, so lessonCount counts them
+         and never falls back to a reported total. */
+      lessonsTotal: null,
       id: `c_${Date.now()}`,
       creatorId: "creator_001",
       creatorName: "Grace Adeyemi",

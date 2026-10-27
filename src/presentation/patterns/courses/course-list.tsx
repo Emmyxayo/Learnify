@@ -13,9 +13,11 @@ import {
   courseAllowance,
   nextTierUp,
   type PlanTier,
+  PLAN_ALLOWED,
 } from "@core/entities/plan";
 import { FirstCoursePrompt } from "../first-course-prompt";
 import { CourseCard, GeneratingCourseCard } from "./course-card";
+import { FEATURES } from "@shared/lib/features";
 
 export function CourseList() {
   const { creator } = useSession();
@@ -66,7 +68,23 @@ function Loaded({
      have not built anything", wherever a creator runs into it. */
   if (courses.length === 0) return <FirstCoursePrompt variant="none" />;
 
-  const allowance = courseAllowance(tier, courses.filter(countsTowardPlanLimit).length);
+  /*
+   * No plans, no plan limit.
+   *
+   * Plans are gated off because the backend has no endpoints for
+   * them, but the limit was being enforced anyway from a tier the
+   * mock's fixtures supply — so against the live API every creator
+   * was capped at one course and told to "Move to Growth", an
+   * upgrade they cannot buy, for a plan that does not exist. The
+   * second course they had already published was still listed above
+   * the notice.
+   *
+   * A limit nothing can raise is not a limit, it is a wall. Until
+   * plans ship, there is no ceiling.
+   */
+  const allowance = FEATURES.plans
+    ? courseAllowance(tier, courses.filter(countsTowardPlanLimit).length)
+    : PLAN_ALLOWED;
   const sorted = [...courses].sort(byAttention);
   const upgrade = nextTierUp(tier);
 

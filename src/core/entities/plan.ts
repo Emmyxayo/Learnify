@@ -98,7 +98,7 @@ export type PlanAllowance =
   | { allowed: true }
   | { allowed: false; blockedBy: PlanBlockedBy };
 
-const PLAN_ALLOWED: PlanAllowance = { allowed: true };
+export const PLAN_ALLOWED: PlanAllowance = { allowed: true };
 
 /** The tier that lifts a limit, or null if there is nothing above. */
 export function nextTierUp(tier: PlanTier): PlanTier | null {

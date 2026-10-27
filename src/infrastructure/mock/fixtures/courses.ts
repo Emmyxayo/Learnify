@@ -320,6 +320,9 @@ function buildCourse(seed: Seed): Course {
   const settled = seed.status === "published" || seed.status === "archived";
 
   return {
+    /* Modules are always present here, so lessonCount counts them
+       rather than falling back to a reported total. */
+    lessonsTotal: null,
     id: seed.id,
     creatorId: seed.creatorId ?? CREATOR_ID,
     creatorName: CREATOR_NAME,

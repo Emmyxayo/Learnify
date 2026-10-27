@@ -302,6 +302,9 @@ export function toCourse(
     schedule: toSchedule(w),
     coverImageUrl: w.cover,
     modules,
+    /* The backend counts them for us, which is the only answer a
+       list item has — it arrives with no modules at all. */
+    lessonsTotal: w.lesson_count,
 
     aiGenerated: false,
 
@@ -439,6 +442,12 @@ export function toPublicCourse(
             : { mode: "daily", sendAt: "08:00" },
     coverImageUrl: w.cover,
     modules,
+    /* The public payload carries no count of its own. This mapper is
+       only used where modules are present, so lessonCount has its
+       real answer and does not need a reported one. The academy
+       listing, which has neither, omits the count rather than
+       printing a zero — see academy-page. */
+    lessonsTotal: null,
     aiGenerated: false,
     enrolmentCount: 0,
     rating: null,

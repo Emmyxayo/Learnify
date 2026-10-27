@@ -464,6 +464,20 @@ export const CourseSchema = z.object({
   schedule: DeliveryScheduleSchema,
   coverImageUrl: z.string().nullable(),
   modules: z.array(ModuleSchema),
+
+  /**
+   * How many lessons there are, when the modules are not loaded.
+   *
+   * A course in a list arrives without them — the studio list sends
+   * everything about a course except its contents — so counting
+   * modules there gives zero, and the studio told a creator "No
+   * lessons yet" about a course they had published with a lesson in
+   * it. The count was in the payload all along.
+   *
+   * Null where nothing said. Modules win wherever they are loaded,
+   * because then the count is a fact rather than a report of one.
+   */
+  lessonsTotal: z.number().int().nullable().default(null),
   aiGenerated: z.boolean(),
 
   /**
@@ -579,6 +593,16 @@ export const generationFailed = (c: Course) => c.generation?.status === "failed"
 /** Files the creator already uploaded, whatever the builder did with them. */
 export const sourceFilesOf = (c: Course) => c.generation?.sourceFiles ?? [];
 
-/** Derived, not stored — keeps the count honest as modules change. */
+/**
+ * Derived where it can be, reported where it cannot.
+ *
+ * Counting the modules keeps this honest while a creator is editing
+ * them, so that stays the first answer. But a course in a list has
+ * no modules loaded, and reducing over an empty array answered zero
+ * for courses that plainly had lessons — "No lessons yet" under a
+ * published course in the creator's own studio.
+ */
 export const lessonCount = (c: Course) =>
-  c.modules.reduce((n, m) => n + m.lessons.length, 0);
+  c.modules.length > 0
+    ? c.modules.reduce((n, m) => n + m.lessons.length, 0)
+    : (c.lessonsTotal ?? 0);

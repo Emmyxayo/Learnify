@@ -8,6 +8,7 @@ import type {
   UpdateAcademyInput,
 } from "@core/ports/academy-repository";
 import { authKeys } from "../creator/query-keys";
+import { DASHBOARD } from "@shared/lib/routes";
 
 export const academyKeys = {
   all: ["academies"] as const,
@@ -96,6 +97,20 @@ export function useUploadAcademyLogo(slug: string) {
  * whole cache goes rather than being selectively invalidated —
  * showing one academy's courses under another's name for even a
  * moment is worse than a reload.
+ *
+ * And then it actually reloads, which it did not before. Clearing
+ * the cache cannot reach two things: the header still read the
+ * academy from a cookie it had sampled once on mount, and every
+ * server-rendered part of the studio was built with the old
+ * X-Academy header and will not rebuild because a client cache
+ * emptied. So picking the other academy wrote the cookie and left
+ * the screen exactly as it was — the creator sees their first
+ * academy's dashboard under their first academy's name, and the only
+ * way to find out it worked is to reload by hand.
+ *
+ * A whole-document load is the honest way to repoint something this
+ * much of the studio is scoped by, and the note above already says a
+ * reload is the lesser evil.
  */
 export function useSwitchAcademy() {
   const qc = useQueryClient();
@@ -103,6 +118,10 @@ export function useSwitchAcademy() {
     (slug: string) => {
       repositories.academies.setActive(slug);
       qc.clear();
+
+      /* assign, not replace: the entry they came from belongs to the
+         academy they just left, so Back should not return to it. */
+      if (typeof window !== "undefined") window.location.assign(DASHBOARD);
     },
     [qc]
   );
