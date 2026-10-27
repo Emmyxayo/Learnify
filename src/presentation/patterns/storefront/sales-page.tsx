@@ -12,6 +12,8 @@ import { WhatsAppPreview } from "@ui/patterns/whatsapp-preview";
 import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
 import { DELIVERY } from "@shared/lib/delivery";
+import { FEATURES } from "@shared/lib/features";
+import { cn } from "@shared/lib/cn";
 import { RemoteImage } from "@ui/ui/remote-image";
 
 const LEVEL_LABELS = {
@@ -231,11 +233,20 @@ function Facts({ course, lessons }: { course: Course; lessons: number }) {
 
 /**
  * The single most persuasive thing on this page, and it costs nothing
- * — the bubble already exists because creators need to see it too.
+ * — the preview already exists because creators need to see it too.
  *
- * This is the one place --deep is earned on a public page: it means
- * "WhatsApp is happening here", and here WhatsApp is literally what
- * is happening.
+ * It follows the channel, and for a long time it did not. --deep means
+ * "WhatsApp is happening here" and this panel wore it unconditionally,
+ * around a chat bubble with a delivered tick on it. On a build that
+ * does not send a single WhatsApp message that made the loudest thing
+ * on the page contradict the sentence inside it: the copy had been
+ * fixed to say lessons open in a browser, and directly underneath sat
+ * a picture of a message arriving on a phone. A student believes the
+ * picture.
+ *
+ * So the chat bubble and the reserved colour are both on the flag, and
+ * what is left on a browser build is the same information rendered as
+ * what it actually is — the first lesson, on a page.
  */
 function Delivery({
   course,
@@ -246,44 +257,81 @@ function Delivery({
   sample: { title: string; body: string; attachments: { kind: string; name: string }[] } | undefined;
   outcome: ReturnType<typeof scheduleOutcome>;
 }) {
+  const onWhatsApp = FEATURES.whatsappDelivery;
+
+  /* One switch, so nothing can be half-migrated: either this panel is
+     the WhatsApp surface or it is an ordinary one. */
+  const t = onWhatsApp
+    ? {
+        panel: "bg-deep",
+        heading: "text-on-deep",
+        body: "text-on-deep-muted",
+        rule: "border-deep-border",
+        strong: "text-on-deep",
+      }
+    : {
+        panel: "border border-border bg-surface-raised",
+        heading: "text-ink",
+        body: "text-body",
+        rule: "border-border",
+        strong: "text-ink",
+      };
+
+  const Icon = onWhatsApp ? MessageCircle : BookOpen;
+
   return (
-    <section className="mt-8 rounded-panel bg-deep p-5">
-      <h2 className="flex items-center gap-2 text-base font-semibold text-on-deep">
-        <MessageCircle className="size-4" aria-hidden />
+    <section className={cn("mt-8 rounded-panel p-5", t.panel)}>
+      <h2 className={cn("flex items-center gap-2 text-base font-semibold", t.heading)}>
+        <Icon className="size-4" aria-hidden />
         How the lessons reach you
       </h2>
-      <p className="mt-1.5 text-sm leading-relaxed text-on-deep-muted">
+      <p className={cn("mt-1.5 text-sm leading-relaxed", t.body)}>
         {DELIVERY.howItWorks(describeSchedule(course.schedule))}
       </p>
 
       {sample && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-on-deep-muted">
+          <p className={cn("mb-2 text-xs font-medium uppercase tracking-wide", t.body)}>
             Your first lesson
           </p>
-          <WhatsAppPreview
-            surface="panel"
-            body={excerpt(`*${sample.title}*\n\n${sample.body}`)}
-            attachments={sample.attachments.slice(0, 2).map((a) => ({
-              kind: a.kind as "pdf" | "audio" | "video" | "image",
-              name: a.name,
-            }))}
-            timestamp={outcome?.firstLessonAt}
-            state="delivered"
-          />
+          {onWhatsApp ? (
+            <WhatsAppPreview
+              surface="panel"
+              body={excerpt(`*${sample.title}*\n\n${sample.body}`)}
+              attachments={sample.attachments.slice(0, 2).map((a) => ({
+                kind: a.kind as "pdf" | "audio" | "video" | "image",
+                name: a.name,
+              }))}
+              timestamp={outcome?.firstLessonAt}
+              state="delivered"
+            />
+          ) : (
+            <div className="rounded-card border border-border bg-surface p-4">
+              <p className="text-sm font-semibold text-ink">{sample.title}</p>
+              <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-body">
+                {excerpt(sample.body)}
+              </p>
+              {sample.attachments.length > 0 && (
+                <p className="mt-2 text-xs text-muted">
+                  {sample.attachments.length}{" "}
+                  {sample.attachments.length === 1 ? "attachment" : "attachments"}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {outcome && (
-        <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-deep-border pt-3.5 text-sm">
+        <dl className={cn("mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-3.5 text-sm", t.rule)}>
           <div className="flex items-center gap-1.5">
-            <Clock className="size-3.5 text-on-deep-muted" aria-hidden />
+            <Clock className={cn("size-3.5", t.body)} aria-hidden />
             <dt className="sr-only">How long it runs</dt>
-            <dd className="text-on-deep">{outcome.runLabel}</dd>
+            <dd className={t.strong}>{outcome.runLabel}</dd>
           </div>
           <div>
             <dt className="sr-only">Lessons</dt>
-            <dd className="text-on-deep-muted">
+            <dd className={t.body}>
               {outcome.lessons} {outcome.lessons === 1 ? "lesson" : "lessons"} in total
             </dd>
           </div>
