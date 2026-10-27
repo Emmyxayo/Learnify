@@ -12,6 +12,7 @@ import { WhatsAppPreview } from "@ui/patterns/whatsapp-preview";
 import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
 import { DELIVERY } from "@shared/lib/delivery";
+import { RemoteImage } from "@ui/ui/remote-image";
 
 const LEVEL_LABELS = {
   beginner: "Beginner",
@@ -135,18 +136,17 @@ export function StorefrontMasthead({ storefront }: { storefront: Storefront }) {
   return (
     <header className="border-b border-border bg-surface-raised">
       <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-5 py-3.5">
-        {storefront.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={storefront.logoUrl}
-            alt=""
-            className="size-7 shrink-0 rounded-pill object-cover"
-          />
-        ) : (
-          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-pill bg-brand text-on-brand">
-            <GraduationCap className="size-4" aria-hidden />
-          </span>
-        )}
+        {/* The brand badge stands in both when there is no logo and
+            when the one on file will not load — see RemoteImage. */}
+        <RemoteImage
+          src={storefront.logoUrl}
+          className="size-7 shrink-0 rounded-pill object-cover"
+          fallback={
+            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-pill bg-brand text-on-brand">
+              <GraduationCap className="size-4" aria-hidden />
+            </span>
+          }
+        />
         <span className="truncate font-semibold text-ink">{storefront.academyName}</span>
       </div>
     </header>

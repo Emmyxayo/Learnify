@@ -10,6 +10,35 @@ Ordered by what it costs a user.
 
 ---
 
+## 0. Every uploaded file 404s
+
+The most visible one, and it affects every creator.
+
+Uploads are accepted, the API returns a URL for them, and the URL
+serves a 404:
+
+```
+GET https://api.learnifyng.tech/media/academies/logos/logo.png     -> 404
+GET https://api.learnifyng.tech/media/courses/covers/cover.png     -> 404
+```
+
+So the academy logo and every course cover are broken on the public
+storefront. A creator uploads a cover, sees it accepted, and their shop
+window shows a torn-page icon to students.
+
+This looks like Django not serving `/media/` under `DEBUG=False` —
+nothing serves that prefix unless nginx aliases it or the project moves
+to a storage backend. Worth checking whether the files are even on disk
+on the current host, since a redeploy without a persistent volume would
+also lose them.
+
+**Frontend now:** images that fail to load fall back to what the design
+already shows when there is no image — the brand badge on the masthead,
+nothing on a course card. A remote file can always 404, so that is right
+regardless; it is hiding this, not fixing it.
+
+---
+
 ## 1. A one-time code sent to a phone number goes nowhere
 
 `POST /api/v1/auth/otp/request/` takes an `identifier`, and a phone

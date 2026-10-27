@@ -8,6 +8,7 @@ import { coursePath } from "@shared/lib/site";
 import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
 import { StorefrontMasthead } from "./sales-page";
+import { RemoteImage } from "@ui/ui/remote-image";
 
 /** "1 course", "4 courses". Nothing here ever reaches a count worth
     abbreviating, so this says the word rather than formatting it. */
@@ -107,14 +108,10 @@ function CourseRow({
       href={coursePath(creatorSlug, course.slug)}
       className="flex gap-4 rounded-card border border-border bg-surface-raised p-4 transition-colors hover:border-brand-border hover:bg-brand-subtle/30"
     >
-      {course.coverImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={course.coverImageUrl}
-          alt=""
-          className="hidden size-20 shrink-0 rounded-control object-cover sm:block"
-        />
-      )}
+      <RemoteImage
+        src={course.coverImageUrl}
+        className="hidden size-20 shrink-0 rounded-control object-cover sm:block"
+      />
 
       <div className="min-w-0 flex-1">
         <h3 className="font-semibold text-ink">{course.title}</h3>
