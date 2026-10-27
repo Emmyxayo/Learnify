@@ -16,6 +16,7 @@ import {
   progressPercent,
   type Enrolment,
 } from "@core/entities/student";
+import { FEATURES } from "@shared/lib/features";
 
 /** Stable identity for the loading and error cases. */
 const NO_ROWS: Enrolment[] = [];
@@ -101,20 +102,27 @@ export function StudentList() {
         },
         meta: { mobile: "meta" },
       },
-      {
-        id: "quiz",
-        header: "Quiz average",
-        accessorFn: (row) => row.quizAverage ?? -1,
-        cell: (ctx) => {
-          const value = ctx.row.original.quizAverage;
-          return value === null ? (
-            <span className="text-faint">No quizzes yet</span>
-          ) : (
-            <span className="tabular-nums">{value}%</span>
-          );
-        },
-        meta: { mobile: "meta", align: "end" },
-      },
+      /* Only where quizzes exist. Nothing scores one on this backend,
+         so the column sat on every row reading "No quizzes yet" —
+         a promise of a feature, made once per student. */
+      ...(FEATURES.quizzes
+        ? [
+            {
+              id: "quiz",
+              header: "Quiz average",
+              accessorFn: (row) => row.quizAverage ?? -1,
+              cell: (ctx) => {
+                const value = ctx.row.original.quizAverage;
+                return value === null ? (
+                  <span className="text-faint">No quizzes yet</span>
+                ) : (
+                  <span className="tabular-nums">{value}%</span>
+                );
+              },
+              meta: { mobile: "meta", align: "end" },
+            } satisfies ColumnDef<Enrolment>,
+          ]
+        : []),
       {
         id: "lastActivity",
         header: "Last seen",

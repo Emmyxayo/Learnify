@@ -15,6 +15,8 @@ import { useSubmissionsForEnrolment } from "@app-layer/submission/queries";
 import { formatDate, formatPhone, formatRelativeTime } from "@shared/lib/format";
 import { isStalled, progressPercent, type Enrolment } from "@core/entities/student";
 import { SUBMISSION_KIND_LABELS, describeScore } from "@core/entities/submission";
+import { FEATURES } from "@shared/lib/features";
+import { cn } from "@shared/lib/cn";
 
 export function StudentDetail({ enrolmentId }: { enrolmentId: string }) {
   const { data: enrolment, isPending, isError, refetch } = useEnrolment(enrolmentId);
@@ -71,12 +73,25 @@ function Profile({ enrolment }: { enrolment: Enrolment }) {
         <EnrolmentStatusChip status={enrolment.status} />
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Three stats, not four, when quizzes are off — a fixed
+          four-column grid would leave a hole where the quiz stat used
+          to be. */}
+      <dl
+        className={cn(
+          "mt-4 grid grid-cols-2 gap-3",
+          FEATURES.quizzes ? "sm:grid-cols-4" : "sm:grid-cols-3"
+        )}
+      >
         <Stat label="Progress" value={`${enrolment.lessonsDelivered}/${enrolment.lessonsTotal}`} hint={`${percent}%`} />
-        <Stat
-          label="Quiz average"
-          value={enrolment.quizAverage === null ? "—" : `${enrolment.quizAverage}%`}
-        />
+        {/* Same as the list: no quizzes on this backend, so the stat
+            was a permanent em dash under a feature that does not
+            exist. */}
+        {FEATURES.quizzes && (
+          <Stat
+            label="Quiz average"
+            value={enrolment.quizAverage === null ? "—" : `${enrolment.quizAverage}%`}
+          />
+        )}
         <Stat label="Joined" value={formatDate(enrolment.enrolledAt)} />
         <Stat
           label="Last seen"
