@@ -147,10 +147,11 @@ const toChallenge = (s: StoredChallenge): OtpChallenge => ({
 async function refresh(): Promise<string | null> {
   const token = getRefresh();
   if (!token) return null;
-  try {
+
+  const attempt = async (value: string) => {
     const next = await requestParsed(WireTokenRefresh, "/api/v1/auth/refresh/", {
       method: "POST",
-      body: { refresh: token },
+      body: { refresh: value },
       anonymous: true,
       unscoped: true,
     });
@@ -158,7 +159,40 @@ async function refresh(): Promise<string | null> {
     setAccessToken(next.access);
     if (next.refresh) setRefresh(next.refresh);
     return next.access;
+  };
+
+  try {
+    return await attempt(token);
   } catch {
+    /*
+     * Someone else may have rotated it out from under us.
+     *
+     * The cookie is shared by every page load and every tab, and the
+     * backend blacklists a refresh token the moment it is used. So
+     * two of them refreshing at once is not a broken session, it is
+     * a normal race: both read the same token, one wins, and the
+     * loser is handed a 401 for a token that was perfectly good when
+     * it read it.
+     *
+     * Coalescing cannot reach across that boundary — a second tab,
+     * or a reload that starts before the previous page's refresh has
+     * written back, each have their own module state. Walking the
+     * dashboard quickly was enough to hit it, and the answer was to
+     * sign the person out.
+     *
+     * So before giving up: read the cookie again. A value that has
+     * changed since we started means the winner already wrote theirs
+     * there, and theirs is the live one — use it rather than
+     * throwing away a session that is still perfectly valid.
+     */
+    const rotated = getRefresh();
+    if (rotated && rotated !== token) {
+      try {
+        return await attempt(rotated);
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
