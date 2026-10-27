@@ -323,16 +323,25 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 let refreshInFlight: Promise<string | null> | null = null;
 
 function refreshOnce(): Promise<string | null> {
-  refreshInFlight ??= (async () => {
-    try {
-      return await refreshAccessToken!();
-    } finally {
+  /*
+   * Deliberately `Promise.resolve().then(...)` rather than an async
+   * IIFE. The work has to start in a microtask, strictly after the
+   * assignment below has happened: an async IIFE begins running the
+   * moment it is created, so if the refresher ever threw
+   * synchronously its `finally` would clear this slot BEFORE `??=`
+   * filled it, leaving a rejected promise latched here for the rest
+   * of the session and every later refresh handed that same
+   * rejection. Today's refresher cannot throw that way; a future one
+   * should not be able to break the session by starting to.
+   */
+  refreshInFlight ??= Promise.resolve()
+    .then(() => refreshAccessToken!())
+    .finally(() => {
       /* Cleared as this settles, so a later 401 — an access token
          that has genuinely aged out — starts a fresh refresh rather
          than being handed this one's stale answer. */
       refreshInFlight = null;
-    }
-  })();
+    });
 
   return refreshInFlight;
 }
