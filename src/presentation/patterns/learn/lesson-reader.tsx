@@ -62,17 +62,37 @@ export function LessonReader({
   // Null means locked or gone. Locked is by far the likelier of the
   // two, and the lesson row says which.
   if (!lesson.data) {
+    /*
+     * A lesson they already finished is a different sentence.
+     *
+     * This backend refuses every lesson once an enrolment completes,
+     * so a student who finished a course and tapped the lesson they
+     * had just read was told "Your place on this course has ended" —
+     * true of the enrolment, and alarming nonsense as a reply to
+     * someone who has only just finished. Say what actually
+     * happened, and lead with the tick rather than the padlock.
+     */
+    const finished = current?.completed === true;
+
     return (
       <Wrap enrolmentId={enrolmentId}>
         <Card className="px-5 py-10 text-center">
-          <Lock className="mx-auto size-6 text-faint" aria-hidden />
+          {finished ? (
+            <span className="mx-auto flex size-9 items-center justify-center rounded-pill bg-success-subtle">
+              <Check className="size-5 text-success" aria-hidden />
+            </span>
+          ) : (
+            <Lock className="mx-auto size-6 text-faint" aria-hidden />
+          )}
           <h1 className="mt-3 text-heading text-ink">
             {current?.title ?? "This lesson has not opened yet"}
           </h1>
           <p className="prose-measure mx-auto mt-1.5 text-muted">
-            {current
-              ? lockedLabel(current)
-              : "It may have been removed, or you may not be enrolled in this course."}
+            {finished
+              ? "You finished this lesson. It is not open for rereading."
+              : current
+                ? lockedLabel(current)
+                : "It may have been removed, or you may not be enrolled in this course."}
           </p>
           <Link
             href={`/learn/${enrolmentId}`}
