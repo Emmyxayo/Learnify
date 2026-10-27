@@ -357,14 +357,45 @@ export async function request<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
+  /*
+   * Which token this attempt actually carried.
+   *
+   * Coalescing concurrent refreshes was not enough on its own. A
+   * screen fires a dozen requests, they all leave before any token
+   * exists, and their 401s come back staggered — about 50ms apart,
+   * each landing after the previous refresh had already settled. So
+   * nothing overlapped, nothing coalesced, and the dashboard made
+   * twelve sequential refreshes on one load. With rotation, each one
+   * invalidates the last, and it only takes two of those twelve to
+   * overlap for the session to be destroyed. That is exactly what
+   * happened on the third reload.
+   *
+   * The point is that those 401s were stale: they answered requests
+   * posted before the first refresh finished, and by the time each
+   * arrived there was already a good token sitting here. Refreshing
+   * again was never the right response — retrying with the token we
+   * now have is.
+   */
+  const sentWith = accessToken;
+
   let res = await send(path, options);
 
   if (res.status === 401 && !options.anonymous && refreshAccessToken) {
-    const fresh = await refreshOnce();
-    if (fresh) {
-      accessToken = fresh;
+    // The token changed while this was in flight, so the 401 is an
+    // answer to a question we would not ask now. Ask it again first.
+    if (accessToken !== sentWith) {
       res = await send(path, options);
     }
+
+    // Still refused with the current token, so it really is expired.
+    if (res.status === 401) {
+      const fresh = await refreshOnce();
+      if (fresh) {
+        accessToken = fresh;
+        res = await send(path, options);
+      }
+    }
+
     if (res.status === 401) {
       onAuthFailure?.();
     }
