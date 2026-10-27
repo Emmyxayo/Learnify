@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ============================================================
    An image from the backend, which may not be there.
@@ -38,12 +38,33 @@ export function RemoteImage({
   fallback?: React.ReactNode;
 }) {
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+
+  /*
+   * onError alone is not enough on a server-rendered page.
+   *
+   * The HTML arrives with the <img> already in it, so the browser
+   * starts fetching before React hydrates. A 404 comes back fast —
+   * faster than hydration on a 3G phone loading a JS bundle — and
+   * that error event fires on a DOM node React has not attached a
+   * handler to yet. The handler is then wired to an image that has
+   * already failed and will never fire again, so the glyph stays.
+   *
+   * So the state is also read directly once on mount: an <img> that
+   * is `complete` with no intrinsic width is one that finished and
+   * has nothing to show.
+   */
+  useEffect(() => {
+    const el = ref.current;
+    if (el && el.complete && el.naturalWidth === 0) setFailed(true);
+  }, [src]);
 
   if (!src || failed) return <>{fallback}</>;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={ref}
       src={src}
       alt={alt}
       className={className}
