@@ -9,10 +9,10 @@ import { TenantTheme } from "./tenant";
 import { PriceTag } from "./price-tag";
 import { StorefrontMasthead } from "./sales-page";
 import { RemoteImage } from "@ui/ui/remote-image";
+import { plural } from "@shared/lib/format";
 
 /** "1 course", "4 courses". Nothing here ever reaches a count worth
     abbreviating, so this says the word rather than formatting it. */
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
  * An academy's shop window.

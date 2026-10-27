@@ -4,7 +4,7 @@ import Link from "next/link";
 import { cn } from "@shared/lib/cn";
 import { CourseCover } from "@ui/patterns/course-cover";
 import { CourseStatusChip } from "@ui/ui/course-status-chip";
-import { formatCount, formatNaira } from "@shared/lib/format";
+import { formatCount, formatNaira, plural, pluralise } from "@shared/lib/format";
 import { isFree } from "@core/value-objects/money";
 import { generationFailed, isGenerating, lessonCount, type Course } from "@core/entities/course";
 import { useCourseGenerationInList } from "@app-layer/course/queries";
@@ -46,9 +46,10 @@ export function CourseCard({ course }: { course: Course }) {
 
         <div className="flex items-end justify-between gap-3">
           <p className="min-w-0 text-xs text-muted">
-            {lessons > 0 ? `${lessons} lessons` : "No lessons yet"}
+            {lessons > 0 ? plural(lessons, "lesson") : "No lessons yet"}
             {course.enrolmentCount > 0 && (
-              <> · {formatCount(course.enrolmentCount)} students</>
+              <> · {formatCount(course.enrolmentCount)}{" "}
+              {pluralise(course.enrolmentCount, "student")}</>
             )}
           </p>
 

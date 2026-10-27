@@ -98,3 +98,19 @@ export function formatDuration(totalSeconds: number): string {
   const seconds = safe % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+/**
+ * The word, agreeing with the number.
+ *
+ * Counts used to be zero nearly everywhere a list rendered one — the
+ * lesson count was derived from modules a list never loads — so
+ * "`${n} lessons`" was always either "0 lessons" or hidden behind a
+ * "No lessons yet". Once the counts became real, the studio started
+ * saying "1 lessons".
+ */
+export const pluralise = (n: number, word: string, many = `${word}s`) =>
+  n === 1 ? word : many;
+
+/** The number and its word together: 1 lesson, 3 lessons. */
+export const plural = (n: number, word: string, many = `${word}s`) =>
+  `${n} ${pluralise(n, word, many)}`;

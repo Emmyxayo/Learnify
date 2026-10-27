@@ -5,7 +5,7 @@ import { cn } from "@shared/lib/cn";
 import { Card } from "@ui/ui/card";
 import { Field } from "@ui/ui/field";
 import { Input, Select } from "@ui/ui/input";
-import { formatDate, formatTime } from "@shared/lib/format";
+import { formatDate, formatTime, plural } from "@shared/lib/format";
 import { describeSchedule, scheduleOutcome } from "@core/value-objects/schedule";
 import type { DeliverySchedule } from "@core/value-objects/schedule";
 
@@ -145,11 +145,11 @@ export function ScheduleSection({
           </p>
         ) : schedule.mode === "immediate" ? (
           <p className="mt-1 text-sm text-muted">
-            All {outcome.lessons} lessons arrive the moment a student joins.
+            All {plural(outcome.lessons, "lesson")} arrive the moment a student joins.
           </p>
         ) : (
           <p className="mt-1 text-sm text-muted">
-            {outcome.lessons} lessons over {outcome.runLabel}. A student who joins today gets their
+            {plural(outcome.lessons, "lesson")} over {outcome.runLabel}. A student who joins today gets their
             first on {formatDate(outcome.firstLessonAt)} and their last on{" "}
             <span className="font-medium text-body">{formatDate(outcome.lastLessonAt)}</span> at{" "}
             {formatTime(outcome.lastLessonAt)}.
