@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus, RotateCw, Sparkles } from "lucide-react";
+import { BookOpen, Check, Plus, RotateCw, Sparkles } from "lucide-react";
 import { Button } from "@ui/ui/button";
 import { Spinner } from "@ui/ui/spinner";
 import { StatusBanner } from "@ui/ui/status-banner";
@@ -399,10 +399,17 @@ function Header({
         <SaveIndicator state={saveState} />
       </div>
 
+      {/* An empty course has nothing to have been over. `total` counts
+          reviewable fields, so a course with no lessons reported zero
+          unreviewed and was congratulated on finishing a review it had
+          never started — on the screen a creator lands on the moment
+          they name a course. */}
       <p className="text-muted">
-        {unreviewed === 0
-          ? "You have been over everything. Approve it when you are happy."
-          : `${reviewed} of ${total} fields reviewed. The ones still marked AI are waiting for you.`}
+        {total === 0
+          ? "Nothing in it yet. Add your first module below."
+          : unreviewed === 0
+            ? "You have been over everything. Approve it when you are happy."
+            : `${reviewed} of ${total} fields reviewed. The ones still marked AI are waiting for you.`}
       </p>
     </header>
   );
@@ -417,6 +424,44 @@ function NothingGenerated({
   onAddModule: () => void;
   canRebuild: boolean;
 }) {
+  /*
+   * Empty because a build produced nothing, or empty because it is
+   * new — and those are not the same sentence.
+   *
+   * This screen is where a creator lands the instant they name a
+   * course, and it told every one of them "The builder came back
+   * empty. It could not find enough structure in your material" —
+   * about material they had never supplied, from a builder that has
+   * no endpoints on this backend and never ran. A first step that
+   * opens by blaming you for a failure that did not happen is a
+   * reason to close the tab.
+   *
+   * `canRebuild` is already the signal: a course only has a
+   * generation attached if something tried to build it.
+   */
+  if (!canRebuild) {
+    return (
+      <div className="rounded-panel border border-border bg-surface-raised px-6 py-12 text-center">
+        <span className="inline-flex size-12 items-center justify-center rounded-pill bg-brand-subtle text-brand">
+          <BookOpen className="size-6" aria-hidden />
+        </span>
+        <h2 className="mt-5 text-heading text-ink">Add your first lesson</h2>
+        <p className="prose-measure mx-auto mt-2 text-body">
+          Start with a module — a section of your course — then write the
+          lessons that go inside it. You can rename and reorder everything
+          later.
+        </p>
+
+        <div className="mt-6 flex justify-center">
+          <Button size="lg" onClick={onAddModule}>
+            <Plus className="size-4" aria-hidden />
+            Add a module
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-panel border border-border bg-surface-raised px-6 py-12 text-center">
       <span className="inline-flex size-12 items-center justify-center rounded-pill bg-warning-subtle text-warning">
@@ -429,12 +474,10 @@ function NothingGenerated({
       </p>
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        {canRebuild && (
-          <Button size="lg" onClick={onRebuild}>
-            <RotateCw className="size-4" aria-hidden />
-            Build it again
-          </Button>
-        )}
+        <Button size="lg" onClick={onRebuild}>
+          <RotateCw className="size-4" aria-hidden />
+          Build it again
+        </Button>
         <Button variant="secondary" size="lg" onClick={onAddModule}>
           Write it myself
         </Button>
