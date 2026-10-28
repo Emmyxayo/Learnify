@@ -158,7 +158,7 @@ export function toCreator(me: WireMe, academy: WireAcademy | null): Creator {
     },
 
     createdAt: user.date_joined,
-  } as Creator;
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -308,6 +308,14 @@ export function toCourse(
 
     aiGenerated: false,
 
+    /* Explicitly null, not absent. Nothing on this backend builds a
+       course, so there is no generation to report — and the review
+       screen asks `generation !== null` to tell "a build produced
+       nothing" from "new and empty". Left off, it arrived as
+       undefined, which is not null, so every hand-made course was
+       greeted with the builder's failure message. */
+    generation: null,
+
     // ABSENT: no enrolment count on the course. The roster endpoint
     // carries the real number when a screen needs it; zero here would
     // read as "nobody enrolled" rather than "not asked".
@@ -315,9 +323,26 @@ export function toCourse(
     rating: null,
     ratingCount: 0,
 
+    /*
+     * The backend keeps no record of when a creator settled the price
+     * or the schedule, so the only honest evidence is publication: a
+     * published course has been through the publish screen, where
+     * both are confirmed. A draft has not, so both are null and the
+     * checklist asks.
+     *
+     * These were missing entirely, and `as Course` let that through.
+     * Absent means undefined, and publishing.ts gates on
+     * `pricedAt !== null` — which undefined satisfies — so the
+     * publish checklist reported the price and the schedule as
+     * settled for every course whether or not anyone had looked at
+     * them. A checklist that is always complete is not a checklist.
+     */
+    pricedAt: w.published_at,
+    scheduledAt: w.published_at,
+
     createdAt: w.created_at,
     publishedAt: w.published_at,
-  } as Course;
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -371,7 +396,7 @@ export function toEnrolment(
 
     // ABSENT: no certificates.
     certificateId: null,
-  } as Enrolment;
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -449,10 +474,18 @@ export function toPublicCourse(
        printing a zero — see academy-page. */
     lessonsTotal: null,
     aiGenerated: false,
+
+    /* Nothing builds courses here, and anything on a storefront is
+       published, so both were settled before it got there. Same
+       three fields `as Course` was quietly letting through. */
+    generation: null,
+    pricedAt: w.published_at,
+    scheduledAt: w.published_at,
+
     enrolmentCount: 0,
     rating: null,
     ratingCount: 0,
     createdAt: w.published_at ?? new Date().toISOString(),
     publishedAt: w.published_at,
-  } as Course;
+  };
 }
